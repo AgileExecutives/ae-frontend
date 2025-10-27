@@ -1,0 +1,52 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "package.json", "tsconfig.json", "vite.config.ts", "tailwind.config.ts"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "build-only": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "package.json", "tsconfig.json", "vite.config.ts", "tailwind.config.ts"],
+      "outputs": ["dist/**"]
+    },
+    "build-watch": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "package.json", "tsconfig.json", "vite.config.ts", "tailwind.config.ts"],
+      "outputs": ["dist/**"],
+      "cache": false,
+      "persistent": true
+    },
+    "type-check": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "package.json", "tsconfig.json"]
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "package.json", "eslint.config.ts"]
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true,
+      "inputs": ["src/**", "public/**", "index.html", "vite.config.ts", "tailwind.config.ts"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "package.json", "tsconfig.json", "vitest.config.ts"]
+    },
+    "test:unit": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "package.json", "tsconfig.json", "vitest.config.ts"]
+    },
+    "test:e2e": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "e2e/**", "package.json", "playwright.config.ts"]
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}

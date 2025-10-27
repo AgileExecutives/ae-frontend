@@ -1,0 +1,37 @@
+{
+  "name": "@agile-exec/ui-components",
+  "version": "0.1.0",
+  "description": "Reusable UI component library for Agile Executives products",
+  "type": "module",
+  "private": false,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./calendar": "./src/calendar/index.ts",
+    "./forms": "./src/forms/index.ts",
+    "./charts": "./src/charts/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "dev": "echo 'UI Components - no dev server needed'",
+    "build": "echo 'UI Components - built by consumers'",
+    "type-check": "vue-tsc --noEmit",
+    "lint": "eslint src --ext .vue,.ts"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  },
+  "dependencies": {
+    "daisyui": "^5.3.9",
+    "lucide-vue-next": "^0.545.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "typescript": "~5.9.0",
+    "vue": "^3.5.22",
+    "vue-tsc": "^3.1.0"
+  }
+}

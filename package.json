@@ -1,0 +1,29 @@
+{
+  "name": "@agile-exec/shared",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:watch": "turbo run build --watch & turbo run dev --no-deps",
+    "build": "turbo run build",
+    "build:watch": "turbo run build --watch",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "prettier --write \"packages/**/*.{ts,tsx,vue,md,json}\"",
+    "open:apps": "echo 'Opening applications:' && echo 'unburdy-app: http://localhost:3000' && echo 'core-frontend: http://localhost:3003' && open http://localhost:3000 http://localhost:3003"
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.8",
+    "typescript": "~5.9.0"
+  },
+  "packageManager": "npm@10.9.2",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}
