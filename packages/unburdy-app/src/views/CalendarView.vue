@@ -1,44 +1,101 @@
 <template>
-  <DrawerLayout>
+  <DrawerLayout :active-view="currentView" @view-change="handleViewChange">
     <div class="container mx-auto px-4 py-6">
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-base-content">Dashboard</h1>
-        <p class="text-base-content/70 mt-2">Welcome to your calendar dashboard</p>
+      <div class="mb-8 hidden lg:flex justify-between">
+        <h1 class="text-3xl font-bold text-base-content">Calendar</h1>
+        <div class="flex items-center ">
+          <!-- View Toggle Buttons -->
+          <div class="btn-group flex gap-2">
+            <button 
+              class="btn btn-sm" 
+              :class="{ 'btn-active': showWeekView }"
+              @click="showWeekView = true; showMonthView = false; showYearView = false"
+            >
+              Week
+            </button>
+            <button 
+              class="btn btn-sm" 
+              :class="{ 'btn-active': showMonthView }"
+              @click="showMonthView = true; showWeekView = false; showYearView = false"
+            >
+              Month
+            </button>
+            <button 
+              class="btn btn-sm" 
+              :class="{ 'btn-active': showYearView }"
+              @click="showYearView = true; showWeekView = false; showMonthView = false"
+            >
+              Year
+            </button>
+          </div>
+          
+          <button class="btn btn-primary ml-2" @click="showAddMeeting = true">
+            <span class="mr-2">Add Meeting</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-        <!-- Calendar -->
+        <!-- Calendar Views -->
         <div class="lg:col-span-4">
-          <div class="card bg-base-100 shadow-sm">
-            <div class="card-header p-4 border-b border-base-300">
-              <h2 class="card-title">Weekly Calendar</h2>
-              <div class="flex gap-2">
-                <button class="btn btn-sm btn-outline" @click="previousWeek">
-                  <ChevronLeftIcon class="w-4 h-4" />
-                  Previous
-                </button>
-                <button class="btn btn-sm btn-outline" @click="nextWeek">
-                  Next
-                  <ChevronRightIcon class="w-4 h-4" />
-                </button>
-                <button class="btn btn-sm btn-primary" @click="goToToday">
-                  Today
-                </button>
-              </div>
-            </div>
-            <div class="card-body p-0">
-              <CalendarWeek
+              <!-- Day View -->
+              <CalendarDay
+                v-if="showDayView"
                 :date="currentDate"
-                :meetings="currentWeekMeetings"
-                :start-hour="8"
-                :end-hour="18"
+                :meetings="currentDayMeetings"
+                :start-hour="7"
+                :end-hour="21"
                 :slot-height="6"
                 :show-current-time="true"
                 @meeting-click="handleMeetingClick"
                 @time-slot-click="handleTimeSlotClick"
+                @previous-day="previousDay"
+                @next-day="nextDay"
+                @go-to-today="goToToday"
+              />
+
+              <!-- Week View -->
+              <CalendarWeek
+                v-if="showWeekView"
+                :date="currentDate"
+                :meetings="currentWeekMeetings"
+                :start-hour="7"
+                :end-hour="21"
+                :slot-height="6"
+                :show-current-time="true"
+                @meeting-click="handleMeetingClick"
+                @time-slot-click="handleTimeSlotClick"
+                @previous-week="previousWeek"
+                @next-week="nextWeek"
+                @go-to-today="goToToday"
+              />
+              
+              <!-- Month View -->
+              <CalendarMonth
+                v-if="showMonthView"
+                :date="currentDate"
+                :meetings="currentMonthMeetings"
+                @meeting-click="handleMeetingClick"
+                @date-click="handleDateClick"
+                @previous-month="previousMonth"
+                @next-month="nextMonth"
+                @go-to-today="goToToday"
+              />
+              
+              <!-- Year View -->
+              <CalendarYear
+                v-if="showYearView"
+                :date="currentDate"
+                :meetings="currentYearMeetings"
+                @meeting-click="handleMeetingClick"
+                @month-click="handleMonthClick"
+                @previous-year="previousYear"
+                @next-year="nextYear"
+                @go-to-today="goToToday"
               />
             </div>
-          </div>
-        </div>
       </div>
 
     <!-- Add Meeting Modal -->
@@ -110,8 +167,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import CalendarWeek from '@/components/calendar/CalendarWeek.vue' 
+import CalendarMonth from '@/components/calendar/CalendarMonth.vue'
+import CalendarYear from '@/components/calendar/CalendarYear.vue'
+import CalendarDay from '@/components/calendar/CalendarDay.vue'
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-vue-next'
 import DrawerLayout from '@/components/layout/DrawerLayout.vue'
 
@@ -129,6 +189,32 @@ interface LocalMeeting {
 
 // Current date for the calendar
 const currentDate = ref(new Date())
+
+// View states  
+const isMobile = ref(false)
+const showMonthView = ref(false)
+const showWeekView = ref(false)
+const showYearView = ref(false)
+const showDayView = ref(false)
+
+// Initialize view based on screen size
+const initializeView = () => {
+  isMobile.value = window.innerWidth < 1024
+  if (isMobile.value) {
+    showDayView.value = true
+  } else {
+    showWeekView.value = true
+  }
+}
+
+// Current view computed for mobile navbar
+const currentView = computed((): 'week' | 'month' | 'year' | 'day' => {
+  if (showDayView.value) return 'day'
+  if (showWeekView.value) return 'week'
+  if (showMonthView.value) return 'month'
+  if (showYearView.value) return 'year'
+  return 'week'
+})
 
 // Sample meetings data
 const meetings = ref<LocalMeeting[]>([
@@ -288,12 +374,6 @@ const todayHours = computed(() => {
   }, 0).toFixed(1)
 })
 
-const freeHours = computed(() => {
-  const workingHours = 10 // 8am to 6pm
-  const scheduledHours = parseFloat(todayHours.value)
-  return (workingHours - scheduledHours).toFixed(1)
-})
-
 // Navigation functions
 const previousWeek = () => {
   const newDate = new Date(currentDate.value)
@@ -307,13 +387,121 @@ const nextWeek = () => {
   currentDate.value = newDate
 }
 
+const previousMonth = () => {
+  const newDate = new Date(currentDate.value)
+  newDate.setMonth(newDate.getMonth() - 1)
+  currentDate.value = newDate
+}
+
+const nextMonth = () => {
+  const newDate = new Date(currentDate.value)
+  newDate.setMonth(newDate.getMonth() + 1)
+  currentDate.value = newDate
+}
+
+const previousYear = () => {
+  const newDate = new Date(currentDate.value)
+  newDate.setFullYear(newDate.getFullYear() - 1)
+  currentDate.value = newDate
+}
+
+const nextYear = () => {
+  const newDate = new Date(currentDate.value)
+  newDate.setFullYear(newDate.getFullYear() + 1)
+  currentDate.value = newDate
+}
+
 const goToToday = () => {
   currentDate.value = new Date()
 }
 
+const previousDay = () => {
+  const newDate = new Date(currentDate.value)
+  newDate.setDate(newDate.getDate() - 1)
+  currentDate.value = newDate
+}
+
+const nextDay = () => {
+  const newDate = new Date(currentDate.value)
+  newDate.setDate(newDate.getDate() + 1)
+  currentDate.value = newDate
+}
+
+// Handle view change from mobile navbar
+const handleViewChange = (view: 'week' | 'month' | 'year' | 'day') => {
+  showWeekView.value = view === 'week'
+  showMonthView.value = view === 'month'
+  showYearView.value = view === 'year'
+  showDayView.value = view === 'day'
+}
+
 // Convert local meetings to calendar format
+const currentDayMeetings = computed(() => {
+  const today = currentDate.value.toISOString().split('T')[0]
+  return meetings.value
+    .filter((meeting: LocalMeeting) => meeting.date === today)
+    .map((meeting: LocalMeeting) => ({
+      id: meeting.id,
+      title: meeting.title,
+      startTime: meeting.startTime,
+      endTime: meeting.endTime,
+      type: meeting.type,
+      description: meeting.description,
+      attendees: meeting.attendees,
+      date: meeting.date
+    }))
+})
+
 const currentWeekMeetings = computed(() => {
   return weekMeetings.value.map((meeting: LocalMeeting) => ({
+    id: meeting.id,
+    title: meeting.title,
+    startTime: meeting.startTime,
+    endTime: meeting.endTime,
+    type: meeting.type,
+    description: meeting.description,
+    attendees: meeting.attendees,
+    date: meeting.date
+  }))
+})
+
+// Month meetings
+const monthMeetings = computed(() => {
+  const startOfMonth = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth(), 1)
+  const endOfMonth = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + 1, 0)
+  
+  return meetings.value.filter((meeting: LocalMeeting) => {
+    const meetingDate = new Date(meeting.date)
+    return meetingDate >= startOfMonth && meetingDate <= endOfMonth
+  })
+})
+
+const currentMonthMeetings = computed(() => {
+  return monthMeetings.value.map((meeting: LocalMeeting) => ({
+    id: meeting.id,
+    title: meeting.title,
+    startTime: meeting.startTime,
+    endTime: meeting.endTime,
+    type: meeting.type,
+    description: meeting.description,
+    attendees: meeting.attendees,
+    date: meeting.date
+  }))
+})
+
+// Year meetings
+const yearMeetings = computed(() => {
+  const startOfYear = new Date(currentDate.value.getFullYear(), 0, 1)
+  const endOfYear = new Date(currentDate.value.getFullYear(), 11, 31)
+  
+  return meetings.value.filter((meeting: LocalMeeting) => {
+    const meetingDate = new Date(meeting.date)
+    return meetingDate >= startOfYear && meetingDate <= endOfYear
+  })
+})
+
+const currentYearMeetings = computed(() => {
+  return yearMeetings.value.map((meeting: LocalMeeting) => ({
     id: meeting.id,
     title: meeting.title,
     startTime: meeting.startTime,
@@ -347,6 +535,25 @@ const handleTimeSlotClick = (time: string) => {
   showAddMeeting.value = true
 }
 
+const handleDateClick = (dateStr: string) => {
+  console.log('Date clicked:', dateStr)
+  newMeeting.value.date = dateStr
+  newMeeting.value.startTime = '09:00'
+  newMeeting.value.endTime = '10:00'
+  showAddMeeting.value = true
+}
+
+const handleMonthClick = (monthIndex: number) => {
+  console.log('Month clicked:', monthIndex)
+  const newDate = new Date(currentDate.value)
+  newDate.setMonth(monthIndex)
+  currentDate.value = newDate
+  // Switch to month view when a month is clicked
+  showMonthView.value = true
+  showWeekView.value = false
+  showYearView.value = false
+}
+
 const closeAddMeeting = () => {
   showAddMeeting.value = false
   newMeeting.value = {
@@ -378,5 +585,13 @@ const saveMeeting = () => {
 onMounted(() => {
   // Set current date to today
   currentDate.value = new Date()
+  // Initialize view based on screen size
+  initializeView()
+  // Listen for resize events
+  window.addEventListener('resize', initializeView)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', initializeView)
 })
 </script>

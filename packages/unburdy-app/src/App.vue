@@ -1,6 +1,6 @@
 
 <template>
-  <div class="flex h-screen w-full bg-gradient-unburdy">
+  <div class="flex bg-gradient-unburdy">
     <RouterView />
   </div>
 </template>

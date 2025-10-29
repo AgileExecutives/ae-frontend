@@ -9,5 +9,6 @@ export default {
     "../core-frontend/src/**/*.{vue,js,ts,jsx,tsx}",
     "../core-frontend/components/**/*.{vue,js,ts,jsx,tsx}",
     "../core-frontend/dist/**/*.{js,css}", // 👈 Add built files
+
   ]
 } satisfies Config

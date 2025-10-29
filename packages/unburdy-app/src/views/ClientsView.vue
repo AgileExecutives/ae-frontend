@@ -1,120 +1,221 @@
 <template>
-  <div class="container mx-auto py-6">
-    <div class="flex justify-between items-center mb-6">
-      <div>
-        <h1 class="text-3xl font-bold">Clients</h1>
-        <p class="text-base-content/70">Manage your clients</p>
-      </div>
-      <button @click="router.push({ name: 'ClientCreate' })" class="btn btn-primary">
-        <Plus class="mr-2 h-4 w-4" />
-        Add Client
-      </button>
-    </div>
-
-    <!-- Loading State -->
-    <div v-if="loading" class="flex justify-center py-12">
-      <Loader2 class="h-8 w-8 animate-spin text-base-content/50" />
-    </div>
-
-    <!-- Error State -->
-    <div v-else-if="error" class="card bg-error text-error-content mb-6">
-      <div class="card-body">
-        <p>{{ error }}</p>
-      </div>
-    </div>
-
-    <!-- Clients List -->
-    <div v-if="!loading && clients.length > 0" class="grid gap-4">
-      <div v-for="client in clients" :key="client.id" class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
-        <div class="card-body">
-          <div class="flex justify-between items-start">
-            <div>
-              <h2 class="card-title">{{ client.first_name }} {{ client.last_name }}</h2>
-              <p v-if="client.date_of_birth" class="text-base-content/70">
-                DOB: {{ formatDate(client.date_of_birth) }}
-              </p>
-            </div>
-            <div class="flex gap-2">
-              <button class="btn btn-ghost btn-sm btn-square" @click="viewClient(client.id)">
-                <Eye class="h-4 w-4" />
-              </button>
-              <button class="btn btn-ghost btn-sm btn-square" @click="deleteClient(client.id)">
-                <Trash2 class="h-4 w-4 text-error" />
-              </button>
-            </div>
-          </div>
+  <DrawerLayout>
+    <div class="container mx-auto px-4 py-6">
+      <div class="mb-8 hidden lg:flex justify-between">
+        <h1 class="text-3xl font-bold text-base-content">Clients</h1>
+        <div class="flex items-center">
+          <!-- Desktop actions could go here -->
         </div>
       </div>
+      
+      <!-- Client List Component -->
+      <ClientList
+        :clients="clients"
+        :search-query="searchQuery"
+        :selected-status="selectedStatus"
+        @client-click="handleClientClick"
+        @client-edit="handleClientEdit"
+        @client-delete="handleClientDelete"
+        @status-filter="handleStatusFilter"
+        @search-change="handleSearchChange"
+        @add-client="handleAddClient"
+      />
     </div>
-
-    <!-- Empty State -->
-    <div v-else-if="!loading && clients.length === 0" class="card bg-base-100 shadow-xl">
-      <div class="card-body flex flex-col items-center justify-center py-12">
-        <Users class="h-12 w-12 text-base-content/50 mb-4" />
-        <h3 class="text-lg font-semibold mb-2">No clients yet</h3>
-        <p class="text-base-content/70 mb-4">Add your first client to get started</p>
-        <button @click="router.push({ name: 'ClientCreate' })" class="btn btn-primary">
-          <Plus class="mr-2 h-4 w-4" />
-          Add First Client
-        </button>
-      </div>
-    </div>
-  </div>
+  </DrawerLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-// Using DaisyUI components instead of shadcn-style imports
-import {
-  Plus,
-  Eye,
-  Trash2,
-  Users,
-  Loader2,
-} from 'lucide-vue-next'
-import { useClientStore } from '@/stores/client'
-import type { Client } from '@agile-exec/api-client'
+import { ref } from 'vue'
+import DrawerLayout from '@/components/layout/DrawerLayout.vue'
+import ClientList from '@/components/clients/ClientList.vue'
 
-const router = useRouter()
-const clientStore = useClientStore()
+interface Client {
+  id: string
+  first_name: string
+  last_name: string
+  date_of_birth: string
+  contact_first_name?: string
+  contact_last_name?: string
+  contact_email?: string
+  contact_phone?: string
+  email?: string
+  phone?: string
+  invoiced_individually?: boolean
+  therapy_title?: string
+  provider_approval_code?: string
+  status: 'waiting' | 'active' | 'archived'
+}
 
-const loading = ref(false)
-const error = ref<string | null>(null)
-const clients = ref<Client[]>([])
+// State
+const searchQuery = ref('')
+const selectedStatus = ref<'all' | 'waiting' | 'active' | 'archived'>('all')
 
-const loadClients = async () => {
-  loading.value = true
-  error.value = null
-  try {
-    clients.value = await clientStore.fetchClients()
-  } catch (e: any) {
-    error.value = e.message || 'Failed to load clients'
-  } finally {
-    loading.value = false
+// Test data - sample clients
+const clients = ref<Client[]>([
+  {
+    id: '1',
+    first_name: 'Emma',
+    last_name: 'Johnson',
+    date_of_birth: '2010-03-15',
+    contact_first_name: 'Sarah',
+    contact_last_name: 'Johnson',
+    contact_email: 'sarah.johnson@email.com',
+    contact_phone: '+1-555-0123',
+    email: 'emma.johnson@email.com',
+    phone: '+1-555-0124',
+    invoiced_individually: false,
+    therapy_title: 'Speech Therapy',
+    provider_approval_code: 'ST-2024-001',
+    status: 'active'
+  },
+  {
+    id: '2',
+    first_name: 'Liam',
+    last_name: 'Smith',
+    date_of_birth: '2008-07-22',
+    contact_first_name: 'Michael',
+    contact_last_name: 'Smith',
+    contact_email: 'michael.smith@email.com',
+    contact_phone: '+1-555-0125',
+    email: 'liam.smith@email.com',
+    phone: '+1-555-0126',
+    invoiced_individually: true,
+    therapy_title: 'Occupational Therapy',
+    provider_approval_code: 'OT-2024-002',
+    status: 'active'
+  },
+  {
+    id: '3',
+    first_name: 'Sophia',
+    last_name: 'Davis',
+    date_of_birth: '2012-11-08',
+    contact_first_name: 'Jennifer',
+    contact_last_name: 'Davis',
+    contact_email: 'jennifer.davis@email.com',
+    contact_phone: '+1-555-0127',
+    email: 'sophia.davis@email.com',
+    phone: '+1-555-0128',
+    invoiced_individually: false,
+    therapy_title: 'Physical Therapy',
+    provider_approval_code: 'PT-2024-003',
+    status: 'waiting'
+  },
+  {
+    id: '4',
+    first_name: 'Mason',
+    last_name: 'Wilson',
+    date_of_birth: '2009-05-14',
+    contact_first_name: 'Robert',
+    contact_last_name: 'Wilson',
+    contact_email: 'robert.wilson@email.com',
+    contact_phone: '+1-555-0129',
+    email: 'mason.wilson@email.com',
+    phone: '+1-555-0130',
+    invoiced_individually: true,
+    therapy_title: 'Behavioral Therapy',
+    provider_approval_code: 'BT-2024-004',
+    status: 'active'
+  },
+  {
+    id: '5',
+    first_name: 'Isabella',
+    last_name: 'Brown',
+    date_of_birth: '2011-01-30',
+    contact_first_name: 'Lisa',
+    contact_last_name: 'Brown',
+    contact_email: 'lisa.brown@email.com',
+    contact_phone: '+1-555-0131',
+    email: 'isabella.brown@email.com',
+    phone: '+1-555-0132',
+    invoiced_individually: false,
+    therapy_title: 'Speech Therapy',
+    provider_approval_code: 'ST-2024-005',
+    status: 'archived'
+  },
+  {
+    id: '6',
+    first_name: 'Ethan',
+    last_name: 'Taylor',
+    date_of_birth: '2007-09-12',
+    contact_first_name: 'David',
+    contact_last_name: 'Taylor',
+    contact_email: 'david.taylor@email.com',
+    contact_phone: '+1-555-0133',
+    email: 'ethan.taylor@email.com',
+    phone: '+1-555-0134',
+    invoiced_individually: true,
+    therapy_title: 'Occupational Therapy',
+    provider_approval_code: 'OT-2024-006',
+    status: 'waiting'
+  },
+  {
+    id: '7',
+    first_name: 'Ava',
+    last_name: 'Anderson',
+    date_of_birth: '2013-04-18',
+    contact_first_name: 'Michelle',
+    contact_last_name: 'Anderson',
+    contact_email: 'michelle.anderson@email.com',
+    contact_phone: '+1-555-0135',
+    email: 'ava.anderson@email.com',
+    phone: '+1-555-0136',
+    invoiced_individually: false,
+    therapy_title: 'Physical Therapy',
+    provider_approval_code: 'PT-2024-007',
+    status: 'active'
+  },
+  {
+    id: '8',
+    first_name: 'Noah',
+    last_name: 'Martinez',
+    date_of_birth: '2010-12-05',
+    contact_first_name: 'Carlos',
+    contact_last_name: 'Martinez',
+    contact_email: 'carlos.martinez@email.com',
+    contact_phone: '+1-555-0137',
+    email: 'noah.martinez@email.com',
+    phone: '+1-555-0138',
+    invoiced_individually: false,
+    therapy_title: 'Speech Therapy',
+    provider_approval_code: 'ST-2024-008',
+    status: 'archived'
+  }
+])
+
+// Event handlers
+const handleClientClick = (client: Client) => {
+  console.log('Client clicked:', client)
+  // TODO: Navigate to client details or open modal
+}
+
+const handleClientEdit = (client: Client) => {
+  console.log('Edit client:', client)
+  // TODO: Open edit modal or navigate to edit form
+}
+
+const handleClientDelete = (client: Client) => {
+  console.log('Delete client:', client)
+  // TODO: Show confirmation dialog and delete
+  if (confirm(`Are you sure you want to delete ${client.first_name} ${client.last_name}?`)) {
+    const index = clients.value.findIndex(c => c.id === client.id)
+    if (index > -1) {
+      clients.value.splice(index, 1)
+    }
   }
 }
 
-const viewClient = (id: number) => {
-  router.push({ name: 'ClientDetail', params: { id } })
+const handleStatusFilter = (status: 'all' | 'waiting' | 'active' | 'archived') => {
+  selectedStatus.value = status
+  console.log('Status filter changed:', status)
 }
 
-const deleteClient = async (id: number) => {
-  if (!confirm('Are you sure you want to delete this client?')) return
-  
-  try {
-    await clientStore.deleteClient(id)
-    await loadClients()
-  } catch (e: any) {
-    error.value = e.message || 'Failed to delete client'
-  }
+const handleSearchChange = (query: string) => {
+  searchQuery.value = query
+  console.log('Search query changed:', query)
 }
 
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString()
+const handleAddClient = () => {
+  console.log('Add new client')
+  // TODO: Open add client modal or navigate to add form
 }
-
-onMounted(() => {
-  loadClients()
-})
 </script>

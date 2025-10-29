@@ -1,0 +1,33 @@
+/**
+ * Calendar Component Dynamic Classes Safelist
+ * 
+ * This file ensures that dynamically generated classes used in calendar components
+ * are not purged by Tailwind CSS. These classes are constructed at runtime using
+ * template literals like `bg-${meeting.type}`.
+ * 
+ * Tailwind CSS will scan this file and include these classes in the final CSS.
+ */
+
+/*
+ * Dynamic Meeting Type Classes - DO NOT REMOVE
+ * 
+ * bg-primary bg-secondary bg-accent bg-info bg-success bg-warning bg-error
+ * text-primary-content text-secondary-content text-accent-content text-info-content text-success-content text-warning-content text-error-content
+ * border-primary border-secondary border-accent border-info border-success border-warning border-error
+ * hover:bg-primary hover:bg-secondary hover:bg-accent hover:bg-info hover:bg-success hover:bg-warning hover:bg-error
+ * badge-primary badge-secondary badge-accent badge-info badge-success badge-warning badge-error
+ * 
+ * These classes are used dynamically in calendar components like:
+ * :class="`bg-${meeting.type} text-${meeting.type}-content border border-${meeting.type}`"
+ */
+
+/* Force include common utility classes */
+.hidden { display: none; }
+.block { display: block; }
+.border { border-width: 1px; }
+.rounded { border-radius: 0.25rem; }
+.shadow-sm { box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); }
+.shadow-md { box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); }
+.shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
+.transition-all { transition-property: all; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); transition-duration: 150ms; }
+.duration-200 { transition-duration: 200ms; }
