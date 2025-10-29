@@ -11,10 +11,9 @@
       <div class="drawer-side z-[70]">
         <label :for="drawerId" aria-label="close sidebar" class="drawer-overlay lg:hidden"></label>
         <label :for="drawerId" aria-label="close sidebar" class="drawer-overlay hidden lg:block" v-if="!isPinned"></label>
-        <div class="min-h-full bg-base-200 flex flex-col" :class="[
-          `w-full lg:${width}`,
-          { 'shadow-xl': !isPinned, 'border-l border-base-300': isPinned }
-        ]">
+        <div class="min-h-full bg-base-200 flex flex-col drawer-sidebar w-full lg:w-auto" 
+             :class="{ 'shadow-xl': !isPinned, 'border-l border-base-300': isPinned }"
+             :style="{ width: isMobile ? '100%' : props.width }">
         <!-- Drawer Header -->
         <div class="flex justify-between items-center p-4 border-b border-base-300">
           <h2 class="text-xl font-bold">{{ title }}</h2>
@@ -95,6 +94,12 @@ const emit = defineEmits<{
 
 // Generate unique drawer ID
 const drawerId = computed(() => `${props.id}-toggle`)
+
+// Mobile breakpoint detection
+const isMobile = computed(() => {
+  if (typeof window === 'undefined') return false
+  return window.innerWidth < 1024
+})
 
 // Internal state that syncs with v-model
 const isOpen = ref(props.modelValue)
