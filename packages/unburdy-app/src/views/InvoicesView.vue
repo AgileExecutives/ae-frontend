@@ -9,7 +9,7 @@
       @close="resetForm"
     >
       <template #content>
-        <div class="container flex flex-col h-full lg:h-screen mx-auto px-4 py-6">
+        <div class="container flex flex-col h-full lg:h-screen mx-auto pb-4 px-4">
           <ViewHeader title="Invoices">
             <template #buttons>
               <!-- Desktop actions could go here -->

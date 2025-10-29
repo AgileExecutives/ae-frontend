@@ -9,7 +9,7 @@
       @close="closeClientDetails"
     >
       <template #content>
-        <div class="container flex flex-col h-full lg:h-screen mx-auto px-4 py-6">
+        <div class="container flex flex-col h-full lg:h-screen mx-auto pb-4 px-4">
           <ViewHeader title="Clients">
             <template #buttons>
               <button class="btn btn-primary" @click="handleAddClient">

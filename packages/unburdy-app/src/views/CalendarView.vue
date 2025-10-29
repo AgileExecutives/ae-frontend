@@ -9,7 +9,7 @@
       @close="closeMeetingDetails"
     >
       <template #content>
-        <div class="container flex flex-col h-full lg:h-screen mx-auto px-4 py-6">
+        <div class="container flex flex-col h-full lg:h-screen mx-auto pb-4 px-4">
       <ViewHeader title="Calendar">
         <template #buttons>
           <!-- View Toggle Buttons -->
