@@ -10,9 +10,8 @@
     >
       <template #content>
         <div class="container flex flex-col h-full lg:h-screen mx-auto px-4 py-6">
-      <div class="mb-8 hidden lg:flex justify-between sticky top-0 z-40 py-4 -mx-4 px-4">
-        <h1 class="text-3xl font-bold text-base-content">Calendar</h1>
-        <div class="flex items-center ">
+      <ViewHeader title="Calendar">
+        <template #buttons>
           <!-- View Toggle Buttons -->
           <div class="btn-group flex gap-2">
             <button 
@@ -44,8 +43,8 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
           </button>
-        </div>
-      </div>
+        </template>
+      </ViewHeader>
         <!-- Calendar Views -->
         <div class="flex-1 min-h-0">
         <!-- Day View -->
@@ -104,6 +103,16 @@
                 @go-to-today="goToToday"
               />
         </div>
+        
+        <!-- Mobile Floating Action Button -->
+        <button 
+          class="btn btn-primary btn-circle fixed bottom-6 right-6 z-50 lg:hidden shadow-lg"
+          @click="openAddMeeting"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
         </div>
       </template>
 
@@ -238,6 +247,7 @@ import CalendarDay from '@/components/calendar/CalendarDay.vue'
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-vue-next'
 import DrawerLayout from '@/components/layout/DrawerLayout.vue'
 import RightDrawer from '@/components/RightDrawer.vue'
+import ViewHeader from '@/components/ViewHeader.vue'
 
 // Calendar view types
 enum CalendarViewType {

@@ -35,7 +35,6 @@ const emit = defineEmits<{
   clientDelete: [client: Client]
   statusFilter: [status: 'all' | 'waiting' | 'active' | 'archived']
   searchChange: [query: string]
-  addClient: []
 }>()
 
 // Local state
@@ -153,10 +152,6 @@ const handleSearchChange = () => {
   emit('searchChange', searchInput.value)
 }
 
-const handleAddClient = () => {
-  emit('addClient')
-}
-
 // Client count by status
 const clientCounts = computed(() => {
   const counts = {
@@ -206,12 +201,6 @@ const clientCounts = computed(() => {
               />
             </div>
           </div>
-          
-          <!-- Add Client Button -->
-          <button class="btn btn-primary btn-sm lg:btn-md" @click="handleAddClient">
-            <Plus class="w-4 h-4" />
-            Add Client
-          </button>
         </div>
       </div>
       

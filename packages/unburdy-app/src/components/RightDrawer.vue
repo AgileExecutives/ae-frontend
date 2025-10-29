@@ -11,7 +11,7 @@
       <div class="drawer-side z-[70]">
         <label :for="drawerId" aria-label="close sidebar" class="drawer-overlay lg:hidden"></label>
         <label :for="drawerId" aria-label="close sidebar" class="drawer-overlay hidden lg:block" v-if="!isPinned"></label>
-        <div class="min-h-full bg-base-200 flex flex-col drawer-sidebar w-full lg:w-auto" 
+        <div class="min-h-full bg-base-200  backdrop-blur flex flex-col drawer-sidebar w-full lg:w-auto" 
              :class="{ 'shadow-xl': !isPinned, 'border-l border-base-300': isPinned }"
              :style="{ width: isMobile ? '100%' : props.width }">
         <!-- Drawer Header -->

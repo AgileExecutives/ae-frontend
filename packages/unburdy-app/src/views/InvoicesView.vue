@@ -10,12 +10,11 @@
     >
       <template #content>
         <div class="container flex flex-col h-full lg:h-screen mx-auto px-4 py-6">
-          <div class="mb-8 hidden lg:flex justify-between">
-            <h1 class="text-3xl font-bold text-base-content">Invoices</h1>
-            <div class="flex items-center">
+          <ViewHeader title="Invoices">
+            <template #buttons>
               <!-- Desktop actions could go here -->
-            </div>
-          </div>
+            </template>
+          </ViewHeader>
           <ViewCard title="Invoices">
             <template #actions>
               <button class="btn btn-primary" @click="openInvoiceDrawer">Add Invoice</button>
@@ -40,6 +39,7 @@ import { ref } from 'vue'
 import DrawerLayout from '@/components/layout/DrawerLayout.vue'
 import ViewCard from '@/components/ViewCard.vue'
 import RightDrawer from '@/components/RightDrawer.vue'
+import ViewHeader from '@/components/ViewHeader.vue'
 
 // Invoice drawer state
 const showInvoiceDrawer = ref(false)
