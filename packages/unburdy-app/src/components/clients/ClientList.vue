@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { ChevronLeft, ChevronRight, Users, Plus, Search } from 'lucide-vue-next'
+import ViewCard from '../ViewCard.vue'
 
 interface Client {
   id: string
@@ -152,6 +153,27 @@ const handleSearchChange = () => {
   emit('searchChange', searchInput.value)
 }
 
+const handleBulkDelete = () => {
+  const selectedIds = Array.from(selectedClients.value)
+  const clientsToDelete = props.clients.filter(client => selectedIds.includes(client.id))
+  
+  if (clientsToDelete.length === 0) return
+  
+  const names = clientsToDelete.map(c => `${c.first_name} ${c.last_name}`).join(', ')
+  const message = clientsToDelete.length === 1 
+    ? `Are you sure you want to delete ${names}?`
+    : `Are you sure you want to delete ${clientsToDelete.length} clients: ${names}?`
+  
+  if (confirm(message)) {
+    // Emit delete events for each selected client
+    clientsToDelete.forEach(client => {
+      emit('clientDelete', client)
+    })
+    // Clear selection after deletion
+    selectedClients.value.clear()
+  }
+}
+
 // Client count by status
 const clientCounts = computed(() => {
   const counts = {
@@ -170,96 +192,68 @@ const clientCounts = computed(() => {
 </script>
 
 <template>
-  <div class="card bg-base-100/60 shadow-xl">
-    <!-- Header -->
-    <div class="card-header p-2 lg:p-4 border-b border-base-200">
-      <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-        <div class="flex-1 min-w-0">
-          <h2 class="card-title text-lg lg:text-xl flex items-center gap-2">
-            <Users class="w-5 h-5" />
-            Clients
-            <span class="text-sm font-normal text-base-content/70">
-              ({{ filteredClients.length }} of {{ props.clients.length }})
-            </span>
-          </h2>
-        </div>
-        
-        <!-- Actions -->
-        <div class="flex flex-col lg:flex-row gap-2 w-full lg:w-auto">
-          <!-- Search -->
-          <div class="form-control">
-            <div class="input-group">
-              <span class="bg-base-200">
-                <Search class="w-4 h-4" />
-              </span>
-              <input 
-                v-model="searchInput"
-                type="text" 
-                placeholder="Search clients..." 
-                class="input input-sm lg:input-md input-bordered w-full lg:w-64"
-                @input="handleSearchChange"
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Status Filter Tabs -->
-      <div class="tabs tabs-boxed mt-4 bg-base-200/50">
-        <a 
-          class="tab tab-sm lg:tab-md"
-          :class="{ 'tab-active': statusFilter === 'all' }"
-          @click="handleStatusFilter('all')"
-        >
-          All ({{ clientCounts.all }})
-        </a>
-        <a 
-          class="tab tab-sm lg:tab-md"
-          :class="{ 'tab-active': statusFilter === 'waiting' }"
-          @click="handleStatusFilter('waiting')"
-        >
-          Waiting ({{ clientCounts.waiting }})
-        </a>
-        <a 
-          class="tab tab-sm lg:tab-md"
-          :class="{ 'tab-active': statusFilter === 'active' }"
-          @click="handleStatusFilter('active')"
-        >
-          Active ({{ clientCounts.active }})
-        </a>
-        <a 
-          class="tab tab-sm lg:tab-md"
-          :class="{ 'tab-active': statusFilter === 'archived' }"
-          @click="handleStatusFilter('archived')"
-        >
-          Archived ({{ clientCounts.archived }})
-        </a>
-      </div>
-    </div>
+  <ViewCard :title="`Clients (${filteredClients.length} of ${props.clients.length})`">
+    <template #actions>
+          <div class="btn-group flex gap-2">
 
-    <!-- Client Table -->
-    <div class="card-body p-0">
-      <div class="overflow-x-auto">
+          <button 
+            class="btn btn-sm" 
+            :class="{ 'btn-active': statusFilter === 'all' }"
+            @click="handleStatusFilter('all')"
+          >
+            All ({{ clientCounts.all }})
+          </button>
+          <button 
+            class="btn btn-sm" 
+            :class="{ 'btn-active': statusFilter === 'waiting' }"
+            @click="handleStatusFilter('waiting')"
+          >
+            Waiting ({{ clientCounts.waiting }})
+          </button>
+          <button 
+            class="btn btn-sm lg:btn-sm"
+            :class="{ 'btn-active': statusFilter === 'active' }"
+            @click="handleStatusFilter('active')"
+          >
+            Active ({{ clientCounts.active }})
+          </button>
+          <button 
+            class="btn btn-sm lg:btn-sm"
+            :class="{ 'btn-active': statusFilter === 'archived' }"
+            @click="handleStatusFilter('archived')"
+          >
+            Archived ({{ clientCounts.archived }})
+          </button>
+      <!-- Search -->
+
+          <input 
+            v-model="searchInput"
+            type="text" 
+            placeholder="Search clients..." 
+            class="input input-sm lg:input-md input-bordered w-full lg:w-64"
+            @input="handleSearchChange"
+          />
+            </div>
+    </template>
+
+    <template #content>
+      <div class="flex flex-col h-full">
+        <!-- Status Filter Tabs -->
+
+
+        <!-- Client Table -->
+        <div class="flex-1 min-h-0 overflow-hidden">
+          <div class="overflow-auto h-full">
         <table class="table table-sm lg:table-md">
           <!-- Head -->
-          <thead>
-            <tr class="bg-base-50">
-              <th class="w-12">
-                <label>
-                  <input 
-                    type="checkbox" 
-                    class="checkbox checkbox-sm"
-                    :checked="selectedClients.size === filteredClients.length && filteredClients.length > 0"
-                    :indeterminate="selectedClients.size > 0 && selectedClients.size < filteredClients.length"
-                    @change="toggleAllClients"
-                  />
-                </label>
-              </th>
-              <th>Client</th>
-              <th class="hidden lg:table-cell">Contact</th>
-              <th class="hidden lg:table-cell">Therapy</th>
-              <th>Status</th>
-              <th class="w-20">Actions</th>
+          <thead class="sticky top-0 z-20">
+            <tr class="bg-base-200/30 backdrop-blur-sm border-b border-base-300">
+                            <th class="w-12 sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm"></th>
+              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Name</th>
+              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Email</th>
+              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Status</th>
+              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Erstellt</th>
+              <th class="text-right sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Aktionen</th>
             </tr>
           </thead>
           
@@ -276,7 +270,7 @@ const clientCounts = computed(() => {
                 <label @click.stop>
                   <input 
                     type="checkbox" 
-                    class="checkbox checkbox-sm"
+                    class="checkbox checkbox-sm hidden"
                     :checked="selectedClients.has(client.id)"
                     @change="toggleClientSelection(client.id)"
                   />
@@ -384,40 +378,69 @@ const clientCounts = computed(() => {
               </td>
             </tr>
           </tbody>
-          
-          <!-- Footer -->
-          <tfoot v-if="filteredClients.length > 0">
-            <tr class="bg-base-50">
-              <th></th>
-              <th>Client</th>
-              <th class="hidden lg:table-cell">Contact</th>
-              <th class="hidden lg:table-cell">Therapy</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </tfoot>
+       
+
         </table>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
+    </template>
+
+    <template #footer>
+      <div class="flex items-center gap-4">
+        <span>{{ filteredClients.length }} of {{ props.clients.length }} clients</span>
+        <span v-if="selectedClients.size > 0" class="text-primary font-medium">
+          {{ selectedClients.size }} selected
+        </span>
+      </div>
+      
+      <!-- Bulk Actions (when clients are selected) -->
+      <div v-if="selectedClients.size > 0" class="flex gap-2">
+        <button class="btn btn-sm btn-outline" @click="selectedClients.clear()">
+          Clear Selection
+        </button>
+        <button class="btn btn-sm btn-error btn-outline" @click="handleBulkDelete">
+          Delete Selected
+        </button>
+      </div>
+      
+      <!-- Summary Stats -->
+      <div v-else class="flex gap-4 text-xs">
+        <span class="badge badge-success badge-outline">
+          {{ clientCounts.active }} Active
+        </span>
+        <span class="badge badge-warning badge-outline">
+          {{ clientCounts.waiting }} Waiting
+        </span>
+        <span class="badge badge-neutral badge-outline">
+          {{ clientCounts.archived }} Archived
+        </span>
+      </div>
+    </template>
+  </ViewCard>
 </template>
 
 <style scoped>
 /* Responsive table scrolling */
-.overflow-x-auto {
+.overflow-auto {
   scrollbar-width: thin;
 }
 
-.overflow-x-auto::-webkit-scrollbar {
+.overflow-auto::-webkit-scrollbar {
+  width: 8px;
   height: 8px;
 }
 
-.overflow-x-auto::-webkit-scrollbar-track {
+.overflow-auto::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.overflow-x-auto::-webkit-scrollbar-thumb {
+.overflow-auto::-webkit-scrollbar-thumb {
   background-color: rgba(0, 0, 0, 0.2);
   border-radius: 4px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);
 }
 </style>
