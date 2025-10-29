@@ -155,7 +155,7 @@ const apiClient = getApiClient()
 
 // State
 const searchQuery = ref('')
-const selectedStatus = ref<'all' | 'waiting' | 'active' | 'archived'>('all')
+const selectedStatus = ref<'all' | 'waiting' | 'active' | 'archived'>('active')
 const isDrawerOpen = ref(false)
 const selectedClient = ref<Client | null>(null)
 const drawerPinned = ref(false)

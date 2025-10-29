@@ -11,7 +11,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   clients: () => [],
   searchQuery: '',
-  selectedStatus: 'all'
+  selectedStatus: 'active'
 })
 
 const emit = defineEmits<{
@@ -170,19 +170,31 @@ const clientCounts = computed(() => {
   
   return counts
 })
+
+// Dynamic title based on selected status
+const dynamicTitle = computed(() => {
+  const statusTitles = {
+    all: 'Clients',
+    waiting: 'Waiting List', 
+    active: 'Active Clients',
+    archived: 'Archived Clients'
+  }
+  const baseTitle = statusTitles[props.selectedStatus] || 'Clients'
+  return `${baseTitle} (${filteredClients.value.length})`
+})
 </script>
 
 <template>
-  <ViewCard :title="`Clients (${filteredClients.length} of ${props.clients.length})`">
+  <ViewCard :title="dynamicTitle">
     <template #actions>
-          <div class="btn-group flex gap-2">
-
+      <div class="flex items-center gap-2">
+        <div class="btn-group">
           <button 
-            class="btn btn-sm" 
-            :class="{ 'btn-active': statusFilter === 'all' }"
-            @click="handleStatusFilter('all')"
+            class="btn btn-sm"
+            :class="{ 'btn-active': statusFilter === 'active' }"
+            @click="handleStatusFilter('active')"
           >
-            All ({{ clientCounts.all }})
+            Active ({{ clientCounts.active }})
           </button>
           <button 
             class="btn btn-sm" 
@@ -192,29 +204,23 @@ const clientCounts = computed(() => {
             Waiting ({{ clientCounts.waiting }})
           </button>
           <button 
-            class="btn btn-sm lg:btn-sm"
-            :class="{ 'btn-active': statusFilter === 'active' }"
-            @click="handleStatusFilter('active')"
-          >
-            Active ({{ clientCounts.active }})
-          </button>
-          <button 
-            class="btn btn-sm lg:btn-sm"
+            class="btn btn-sm"
             :class="{ 'btn-active': statusFilter === 'archived' }"
             @click="handleStatusFilter('archived')"
           >
             Archived ({{ clientCounts.archived }})
           </button>
-      <!-- Search -->
-
-          <input 
-            v-model="searchInput"
-            type="text" 
-            placeholder="Search clients..." 
-            class="input input-sm lg:input-md input-bordered w-full lg:w-64"
-            @input="handleSearchChange"
-          />
-            </div>
+        </div>
+        
+        <!-- Search -->
+        <input 
+          v-model="searchInput"
+          type="text" 
+          placeholder="Search clients..." 
+          class="input input-sm lg:input-md input-bordered w-full lg:w-64"
+          @input="handleSearchChange"
+        />
+      </div>
     </template>
 
     <template #content>
