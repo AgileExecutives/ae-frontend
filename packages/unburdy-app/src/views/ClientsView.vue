@@ -149,7 +149,7 @@ import ViewHeader from '@/components/ViewHeader.vue'
 import RightDrawer from '@/components/RightDrawer.vue'
 
 interface Client {
-  id: string
+  id: number
   first_name: string
   last_name: string
   date_of_birth: string
@@ -166,7 +166,7 @@ interface Client {
 }
 
 // State
-const searchQuery = ref('')
+const searchQuery = ref()
 const selectedStatus = ref<'all' | 'waiting' | 'active' | 'archived'>('all')
 const isDrawerOpen = ref(false)
 const selectedClient = ref<Client | null>(null)
@@ -219,7 +219,7 @@ const calculateAge = (dateOfBirth: string) => {
 // Test data - sample clients
 const clients = ref<Client[]>([
   {
-    id: '1',
+    id: 1,
     first_name: 'Emma',
     last_name: 'Johnson',
     date_of_birth: '2010-03-15',
@@ -235,7 +235,7 @@ const clients = ref<Client[]>([
     status: 'active'
   },
   {
-    id: '2',
+    id: 2,
     first_name: 'Liam',
     last_name: 'Smith',
     date_of_birth: '2008-07-22',
@@ -251,7 +251,7 @@ const clients = ref<Client[]>([
     status: 'active'
   },
   {
-    id: '3',
+    id: 3,
     first_name: 'Sophia',
     last_name: 'Davis',
     date_of_birth: '2012-11-08',
@@ -267,7 +267,7 @@ const clients = ref<Client[]>([
     status: 'waiting'
   },
   {
-    id: '4',
+    id: 4,
     first_name: 'Mason',
     last_name: 'Wilson',
     date_of_birth: '2009-05-14',
@@ -283,7 +283,7 @@ const clients = ref<Client[]>([
     status: 'active'
   },
   {
-    id: '5',
+    id: 5,
     first_name: 'Isabella',
     last_name: 'Brown',
     date_of_birth: '2011-01-30',
@@ -299,7 +299,7 @@ const clients = ref<Client[]>([
     status: 'archived'
   },
   {
-    id: '6',
+    id: 6,
     first_name: 'Ethan',
     last_name: 'Taylor',
     date_of_birth: '2007-09-12',
@@ -315,7 +315,7 @@ const clients = ref<Client[]>([
     status: 'waiting'
   },
   {
-    id: '7',
+    id: 7,
     first_name: 'Ava',
     last_name: 'Anderson',
     date_of_birth: '2013-04-18',
@@ -331,71 +331,7 @@ const clients = ref<Client[]>([
     status: 'active'
   },
   {
-    id: '8',
-    first_name: 'Noah',
-    last_name: 'Martinez',
-    date_of_birth: '2010-12-05',
-    contact_first_name: 'Carlos',
-    contact_last_name: 'Martinez',
-    contact_email: 'carlos.martinez@email.com',
-    contact_phone: '+1-555-0137',
-    email: 'noah.martinez@email.com',
-    phone: '+1-555-0138',
-    invoiced_individually: false,
-    therapy_title: 'Speech Therapy',
-    provider_approval_code: 'ST-2024-008',
-    status: 'archived'
-  },
-  {
-    id: '9',
-    first_name: 'Ava',
-    last_name: 'Anderson',
-    date_of_birth: '2013-04-18',
-    contact_first_name: 'Michelle',
-    contact_last_name: 'Anderson',
-    contact_email: 'michelle.anderson@email.com',
-    contact_phone: '+1-555-0135',
-    email: 'ava.anderson@email.com',
-    phone: '+1-555-0136',
-    invoiced_individually: false,
-    therapy_title: 'Physical Therapy',
-    provider_approval_code: 'PT-2024-007',
-    status: 'active'
-  },
-  {
-    id: '10',
-    first_name: 'Noah',
-    last_name: 'Martinez',
-    date_of_birth: '2010-12-05',
-    contact_first_name: 'Carlos',
-    contact_last_name: 'Martinez',
-    contact_email: 'carlos.martinez@email.com',
-    contact_phone: '+1-555-0137',
-    email: 'noah.martinez@email.com',
-    phone: '+1-555-0138',
-    invoiced_individually: false,
-    therapy_title: 'Speech Therapy',
-    provider_approval_code: 'ST-2024-008',
-    status: 'archived'
-  },
-  {
-    id: '11',
-    first_name: 'Ava',
-    last_name: 'Anderson',
-    date_of_birth: '2013-04-18',
-    contact_first_name: 'Michelle',
-    contact_last_name: 'Anderson',
-    contact_email: 'michelle.anderson@email.com',
-    contact_phone: '+1-555-0135',
-    email: 'ava.anderson@email.com',
-    phone: '+1-555-0136',
-    invoiced_individually: false,
-    therapy_title: 'Physical Therapy',
-    provider_approval_code: 'PT-2024-007',
-    status: 'active'
-  },
-  {
-    id: '12',
+    id: 8,
     first_name: 'Noah',
     last_name: 'Martinez',
     date_of_birth: '2010-12-05',
