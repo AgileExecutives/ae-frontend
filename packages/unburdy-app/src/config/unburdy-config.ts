@@ -8,10 +8,10 @@
 import { setAppConfig } from '@agile-exec/core-frontend/config/app-config'
 
 // Import Unburdy-specific logos
-import unburdyLogo from '../assets/unburdy-logo.svg'
-import unburdyLogoDark from '../assets/unburdy-logo-dark.svg'
-import unburdyLogoSmall from '../assets/unburdy-logo-small.svg'
-import unburdyLogoSmallDark from '../assets/unburdy-logo-small-dark.svg'
+import unburdyLogo from '../assets/logo-color.svg'
+import unburdyLogoDark from '../assets/logo-color-dark.svg'
+import unburdyLogoSmall from '../assets/logo-color-small.svg'
+import unburdyLogoSmallDark from '../assets/logo-color-small-dark.svg'
 
 // Configure the app with Unburdy-specific settings
 export const configureUnburdyApp = () => {

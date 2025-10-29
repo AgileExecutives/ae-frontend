@@ -3,7 +3,7 @@
     <input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
     <div class="drawer-content flex flex-col">
       <!-- Mobile Navbar -->
-      <div class="navbar bg-base-300 w-full lg:hidden">
+      <div class="navbar bg-base-300/30 w-full lg:hidden">
         <div class="flex-none">
           <label for="drawer-toggle" aria-label="open sidebar" class="btn btn-square btn-ghost">
             <svg
@@ -73,7 +73,22 @@
     </div>
     <div class="drawer-side">
       <label for="drawer-toggle" aria-label="close sidebar" class="drawer-overlay lg:hidden"></label>
-      <div class="w-64 lg:w-14 lg:hover:w-64 bg-base-200 flex flex-col items-start min-h-full transition-all duration-300 group">
+      <div class="pl-2 w-64 lg:w-14 lg:hover:w-64 bg-base-200/40 flex flex-col items-start min-h-full transition-all duration-300 group">
+        
+        <!-- Desktop Logo -->
+        <div class="hidden lg:flex items-center justify-center w-full my-6 pr-2 border-b border-base-300/30">
+          <!-- Collapsed state: small logo -->
+          <div class="lg:group-hover:hidden pt-1">
+            <img :src="unburdyLogoSmall" alt="Unburdy" class="w-8 h-8 dark:hidden" />
+            <img :src="unburdyLogoSmallDark" alt="Unburdy" class="w-8 h-8 hidden dark:block" />
+          </div>
+          <!-- Expanded state: full logo -->
+          <div class="hidden pt-1 lg:group-hover:block">
+            <img :src="unburdyLogo" alt="Unburdy" class="h-8 dark:hidden" />
+            <img :src="unburdyLogoDark" alt="Unburdy" class="h-8 hidden dark:block" />
+          </div>
+        </div>
+
         <!-- Sidebar content here -->
         <ul class="menu w-full grow">
           <!-- Dashboard -->
@@ -206,6 +221,11 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import ThemeToggle from '@unburdy/base-app/components/ThemeToggle.vue'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
+// Import logos
+import unburdyLogo from '@/assets/logo-color.svg'
+import unburdyLogoDark from '@/assets/logo-color-dark.svg'
+import unburdyLogoSmall from '@/assets/logo-color-small.svg'
+import unburdyLogoSmallDark from '@/assets/logo-color-small-dark.svg'
 
 const props = withDefaults(defineProps<{
   activeView?: 'week' | 'month' | 'year' | 'day'

@@ -306,8 +306,8 @@ const weekTitle = computed(() => {
     </template>
 
     <template #content>
-      <div class="h-full p-0">
-      <div class="grid border-t border-base-200" style="grid-template-columns: 60px repeat(7, 1fr); padding-right: 8px;">
+      <div class="flex flex-col h-full p-0">
+      <div class="grid border-t border-base-200 flex-shrink-0" style="grid-template-columns: 60px repeat(7, 1fr); padding-right: 8px;">
         <!-- Time Column Header -->
         <div class="p-2 border-r border-base-200 bg-base-50/50 text-center text-xs font-medium text-base-content/70">
           Time
@@ -332,8 +332,7 @@ const weekTitle = computed(() => {
 
       <!-- Calendar Body -->
       <div 
-        class="relative overflow-auto"
-        :style="{ height: '70vh' }"
+        class="relative overflow-auto flex-1"
       >
         <div class="grid" :style="{ height: `${gridHeight}px`, gridTemplateColumns: '60px repeat(7, 1fr)' }">
           <!-- Time Labels Column -->

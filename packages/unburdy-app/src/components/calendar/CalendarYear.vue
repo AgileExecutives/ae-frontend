@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-vue-next'
+import ViewCard from '../ViewCard.vue'
 
 interface Meeting {
   id: string
@@ -157,32 +158,29 @@ const getPrimaryMeetingType = (meetingsByType: Record<string, number>) => {
   // Return the type with most meetings
   return types.reduce((a, b) => (meetingsByType[a] || 0) > (meetingsByType[b] || 0) ? a : b)
 }
+
+// Year title for ViewCard
+const yearTitle = computed(() => {
+  return props.date.getFullYear().toString()
+})
 </script>
 
 <template>
-  <div class="card bg-base-100/40 shadow-xl">
-    <!-- Header -->
-    <div class="card-header p-2 lg:p-4 border-b border-base-200">
-      <div class="flex justify-between items-center">
-        <div class="flex-1 min-w-0">
-          <h2 class="card-title text-sm lg:text-base">Year {{ yearString }}</h2>
-        </div>
-        <div class="flex gap-1 lg:gap-2">
-          <button class="btn btn-xs lg:btn-sm btn-outline btn-circle" @click="previousYear" title="Previous Year">
-            <ChevronLeft class="w-3 h-3 lg:w-4 lg:h-4" />
-          </button>
-          <button class="btn btn-xs lg:btn-sm btn-outline btn-circle" @click="nextYear" title="Next Year">
-            <ChevronRight class="w-3 h-3 lg:w-4 lg:h-4" />
-          </button>
-          <button class="btn btn-xs lg:btn-sm btn-primary btn-circle" @click="goToToday" title="Go to Today">
-            <CalendarDays class="w-3 h-3 lg:w-4 lg:h-4" />
-          </button>
-        </div>
-      </div>
-    </div>
+  <ViewCard :title="yearTitle">
+    <template #actions>
+      <button class="btn btn-xs lg:btn-sm btn-outline btn-circle" @click="previousYear" title="Previous Year">
+        <ChevronLeft class="w-3 h-3 lg:w-4 lg:h-4" />
+      </button>
+      <button class="btn btn-xs lg:btn-sm btn-outline btn-circle" @click="nextYear" title="Next Year">
+        <ChevronRight class="w-3 h-3 lg:w-4 lg:h-4" />
+      </button>
+      <button class="btn btn-xs lg:btn-sm btn-primary btn-circle" @click="goToToday" title="Go to Today">
+        <CalendarDays class="w-3 h-3 lg:w-4 lg:h-4" />
+      </button>
+    </template>
 
-    <!-- Calendar Body -->
-    <div class="card-body p-0">
+    <template #content>
+      <div class="flex flex-col h-full p-0">
       <div class="bg-base-100/40 flex flex-col" :style="{ height: '80vh' }">
         <!-- Year Grid -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 p-2 lg:p-4 overflow-y-auto flex-1">
@@ -246,14 +244,18 @@ const getPrimaryMeetingType = (meetingsByType: Record<string, number>) => {
           </div>
         </div>
       </div>
-    </div>
-        <!-- Footer Stats -->
-    <div class="card-footer p-3 border-t border-base-200 bg-base-50">
-      <div class="flex justify-between items-center text-sm">
-
       </div>
-    </div>
-  </div>
+    </template>
+
+    <template #footer>
+      <div class="text-sm text-base-content/70">
+        {{ meetings.length }} meetings this year
+      </div>
+      <div class="text-sm text-base-content/70">
+        {{ yearTitle }}
+      </div>
+    </template>
+  </ViewCard>
 </template>
 
 <style scoped>

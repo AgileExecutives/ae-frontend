@@ -1,6 +1,6 @@
 <template>
   <DrawerLayout :active-view="currentView" @view-change="handleViewChange">
-    <div class="container mx-auto px-4 py-6">
+    <div class="container flex flex-col h-screen mx-auto px-4 py-6">
       <div class="mb-8 hidden lg:flex justify-between">
         <h1 class="text-3xl font-bold text-base-content">Calendar</h1>
         <div class="flex items-center ">
@@ -9,21 +9,21 @@
             <button 
               class="btn btn-sm" 
               :class="{ 'btn-active': showWeekView }"
-              @click="showWeekView = true; showMonthView = false; showYearView = false"
+              @click="setWeekView"
             >
               Week
             </button>
             <button 
               class="btn btn-sm" 
               :class="{ 'btn-active': showMonthView }"
-              @click="showMonthView = true; showWeekView = false; showYearView = false"
+              @click="setMonthView"
             >
               Month
             </button>
             <button 
               class="btn btn-sm" 
               :class="{ 'btn-active': showYearView }"
-              @click="showYearView = true; showWeekView = false; showMonthView = false"
+              @click="setYearView"
             >
               Year
             </button>
@@ -39,8 +39,8 @@
       </div>
 
         <!-- Calendar Views -->
-        <div class="lg:col-span-4">
-              <!-- Day View -->
+        <div class="flex-1 min-h-0">
+        <!-- Day View -->
               <CalendarDay
                 v-if="showDayView"
                 :date="currentDate"
@@ -95,8 +95,8 @@
                 @next-year="nextYear"
                 @go-to-today="goToToday"
               />
-            </div>
-      </div>
+        </div>
+    </div>
 
     <!-- Add Meeting Modal -->
     <div v-if="showAddMeeting" class="modal modal-open">
@@ -175,6 +175,14 @@ import CalendarDay from '@/components/calendar/CalendarDay.vue'
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-vue-next'
 import DrawerLayout from '@/components/layout/DrawerLayout.vue'
 
+// Calendar view types
+enum CalendarViewType {
+  Day = 'day',
+  Week = 'week', 
+  Month = 'month',
+  Year = 'year'
+}
+
 // Local type definition for Meeting with date
 interface LocalMeeting {
   id: string
@@ -192,29 +200,28 @@ const currentDate = ref(new Date())
 
 // View states  
 const isMobile = ref(false)
-const showMonthView = ref(false)
-const showWeekView = ref(false)
-const showYearView = ref(false)
-const showDayView = ref(false)
+const currentCalendarView = ref<CalendarViewType>(CalendarViewType.Week)
 
 // Initialize view based on screen size
 const initializeView = () => {
   isMobile.value = window.innerWidth < 1024
   if (isMobile.value) {
-    showDayView.value = true
+    currentCalendarView.value = CalendarViewType.Day
   } else {
-    showWeekView.value = true
+    currentCalendarView.value = CalendarViewType.Week
   }
 }
 
 // Current view computed for mobile navbar
 const currentView = computed((): 'week' | 'month' | 'year' | 'day' => {
-  if (showDayView.value) return 'day'
-  if (showWeekView.value) return 'week'
-  if (showMonthView.value) return 'month'
-  if (showYearView.value) return 'year'
-  return 'week'
+  return currentCalendarView.value as 'week' | 'month' | 'year' | 'day'
 })
+
+// View type computed properties
+const showDayView = computed(() => currentCalendarView.value === CalendarViewType.Day)
+const showWeekView = computed(() => currentCalendarView.value === CalendarViewType.Week)
+const showMonthView = computed(() => currentCalendarView.value === CalendarViewType.Month)
+const showYearView = computed(() => currentCalendarView.value === CalendarViewType.Year)
 
 // Sample meetings data
 const meetings = ref<LocalMeeting[]>([
@@ -429,11 +436,14 @@ const nextDay = () => {
 
 // Handle view change from mobile navbar
 const handleViewChange = (view: 'week' | 'month' | 'year' | 'day') => {
-  showWeekView.value = view === 'week'
-  showMonthView.value = view === 'month'
-  showYearView.value = view === 'year'
-  showDayView.value = view === 'day'
+  currentCalendarView.value = view as CalendarViewType
 }
+
+// View change helper functions
+const setWeekView = () => currentCalendarView.value = CalendarViewType.Week
+const setMonthView = () => currentCalendarView.value = CalendarViewType.Month
+const setYearView = () => currentCalendarView.value = CalendarViewType.Year
+const setDayView = () => currentCalendarView.value = CalendarViewType.Day
 
 // Convert local meetings to calendar format
 const currentDayMeetings = computed(() => {
@@ -549,9 +559,7 @@ const handleMonthClick = (monthIndex: number) => {
   newDate.setMonth(monthIndex)
   currentDate.value = newDate
   // Switch to month view when a month is clicked
-  showMonthView.value = true
-  showWeekView.value = false
-  showYearView.value = false
+  currentCalendarView.value = CalendarViewType.Month
 }
 
 const closeAddMeeting = () => {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-vue-next'
+import ViewCard from '../ViewCard.vue'
 
 interface Meeting {
   id: string
@@ -149,32 +150,32 @@ const handleMeetingClick = (meeting: Meeting) => {
 
 // Day names
 const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+// Month title for ViewCard
+const monthTitle = computed(() => {
+  return props.date.toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long' 
+  })
+})
 </script>
 
 <template>
-  <div class="card bg-base-100/40 shadow-xl">
-    <!-- Header -->
-    <div class="card-header p-2 lg:p-4 border-b border-base-200">
-      <div class="flex justify-between items-center">
-        <div class="flex-1 min-w-0">
-          <h2 class="card-title text-sm lg:text-base">{{ monthYearString }}</h2>
-        </div>
-        <div class="flex gap-1 lg:gap-2">
-          <button class="btn btn-xs lg:btn-sm btn-outline btn-circle" @click="previousMonth" title="Previous Month">
-            <ChevronLeft class="w-3 h-3 lg:w-4 lg:h-4" />
-          </button>
-          <button class="btn btn-xs lg:btn-sm btn-outline btn-circle" @click="nextMonth" title="Next Month">
-            <ChevronRight class="w-3 h-3 lg:w-4 lg:h-4" />
-          </button>
-          <button class="btn btn-xs lg:btn-sm btn-primary btn-circle" @click="goToToday" title="Go to Today">
-            <CalendarDays class="w-3 h-3 lg:w-4 lg:h-4" />
-          </button>
-        </div>
-      </div>
-    </div>
+  <ViewCard :title="monthTitle">
+    <template #actions>
+      <button class="btn btn-xs lg:btn-sm btn-outline btn-circle" @click="previousMonth" title="Previous Month">
+        <ChevronLeft class="w-3 h-3 lg:w-4 lg:h-4" />
+      </button>
+      <button class="btn btn-xs lg:btn-sm btn-outline btn-circle" @click="nextMonth" title="Next Month">
+        <ChevronRight class="w-3 h-3 lg:w-4 lg:h-4" />
+      </button>
+      <button class="btn btn-xs lg:btn-sm btn-primary btn-circle" @click="goToToday" title="Go to Today">
+        <CalendarDays class="w-3 h-3 lg:w-4 lg:h-4" />
+      </button>
+    </template>
 
-    <!-- Calendar Body -->
-    <div class="card-body p-0">
+    <template #content>
+      <div class="flex flex-col h-full p-0">
       <div class="bg-base-100/40 flex flex-col" :style="{ height: '80vh' }">
         <!-- Calendar Header with Day Names -->
         <div class="grid border-b border-base-200 bg-base-50 flex-shrink-0" :style="{ gridTemplateColumns: isMobile ? '25px repeat(7, 1fr)' : '35px repeat(7, 1fr)' }">
@@ -253,8 +254,18 @@ const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
           </template>
         </div>
       </div>
-    </div>
-  </div>
+      </div>
+    </template>
+
+    <template #footer>
+      <div class="text-sm text-base-content/70">
+        {{ meetings.length }} meetings this month
+      </div>
+      <div class="text-sm text-base-content/70">
+        {{ monthTitle }}
+      </div>
+    </template>
+  </ViewCard>
 </template>
 
 <style scoped>

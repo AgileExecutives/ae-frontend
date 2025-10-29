@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-vue-next'
+import ViewCard from '../ViewCard.vue'
 
 interface Meeting {
   id: string
@@ -197,35 +198,47 @@ const currentTimeString = computed(() => {
     minute: '2-digit'
   })
 })
+
+// Day title for ViewCard
+const dayTitle = computed(() => {
+  if (!dayData.value) return 'Day View'
+  
+  // Desktop title
+  const desktopTitle = dayData.value.date.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  })
+  
+  // Mobile title
+  const mobileTitle = dayData.value.date.toLocaleDateString('en-US', { 
+    weekday: 'short', 
+    month: 'short', 
+    day: 'numeric' 
+  })
+  
+  // Return desktop title for now - ViewCard can handle responsive display
+  return desktopTitle
+})
 </script>
 
 <template>
-  <div class="card bg-base-100/60 shadow-xl">
-    <!-- Header -->
-    <div class="card-header p-2 lg:p-4 border-b border-base-200">
-      <div class="flex justify-between items-center">
-        <div class="flex-1 min-w-0">
-          <!-- Desktop title -->
-          <h2 class="card-title hidden lg:block">{{ dayData.dayName }}, {{ dayData.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) }}</h2>
-          <!-- Mobile title -->
-          <h2 class="card-title text-sm lg:hidden">{{ dayData.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) }}</h2>
-        </div>
-        <div class="flex gap-1 lg:gap-2">
-          <button class="btn btn-xs lg:btn-sm btn-outline btn-circle" @click="previousDay" title="Previous Day">
-            <ChevronLeft class="w-3 h-3 lg:w-4 lg:h-4" />
-          </button>
-          <button class="btn btn-xs lg:btn-sm btn-outline btn-circle" @click="nextDay" title="Next Day">
-            <ChevronRight class="w-3 h-3 lg:w-4 lg:h-4" />
-          </button>
-          <button class="btn btn-xs lg:btn-sm btn-primary btn-circle" @click="goToToday" title="Go to Today">
-            <CalendarDays class="w-3 h-3 lg:w-4 lg:h-4" />
-          </button>
-        </div>
-      </div>
-    </div>
+  <ViewCard :title="dayTitle">
+    <template #actions>
+      <button class="btn btn-xs lg:btn-sm btn-outline btn-circle" @click="previousDay" title="Previous Day">
+        <ChevronLeft class="w-3 h-3 lg:w-4 lg:h-4" />
+      </button>
+      <button class="btn btn-xs lg:btn-sm btn-outline btn-circle" @click="nextDay" title="Next Day">
+        <ChevronRight class="w-3 h-3 lg:w-4 lg:h-4" />
+      </button>
+      <button class="btn btn-xs lg:btn-sm btn-primary btn-circle" @click="goToToday" title="Go to Today">
+        <CalendarDays class="w-3 h-3 lg:w-4 lg:h-4" />
+      </button>
+    </template>
 
-    <!-- Calendar Grid -->
-    <div class="card-body p-0">
+    <template #content>
+      <div class="flex flex-col h-full p-0">
 
       <!-- Calendar Body -->
       <div 
@@ -302,8 +315,18 @@ const currentTimeString = computed(() => {
           </div>
         </div>
       </div>
-    </div>
-  </div>
+      </div>
+    </template>
+
+    <template #footer>
+      <div class="text-sm text-base-content/70">
+        {{ meetings.length }} meetings today
+      </div>
+      <div class="text-sm text-base-content/70">
+        Current time: {{ currentTimeString }}
+      </div>
+    </template>
+  </ViewCard>
 </template>
 
 <style scoped>
