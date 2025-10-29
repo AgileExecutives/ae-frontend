@@ -2,23 +2,7 @@
 import { computed, ref } from 'vue'
 import { ChevronLeft, ChevronRight, Users, Plus, Search } from 'lucide-vue-next'
 import ViewCard from '../ViewCard.vue'
-
-interface Client {
-  id: string
-  first_name: string
-  last_name: string
-  date_of_birth: string // YYYY-MM-DD format
-  contact_first_name?: string
-  contact_last_name?: string
-  contact_email?: string
-  contact_phone?: string
-  email?: string
-  phone?: string
-  invoiced_individually?: boolean
-  therapy_title?: string
-  provider_approval_code?: string
-  status: 'waiting' | 'active' | 'archived'
-}
+import type { Client } from '@agile-exec/api-client'
 
 const props = withDefaults(defineProps<{
   clients?: Client[]
@@ -39,13 +23,13 @@ const emit = defineEmits<{
 }>()
 
 // Local state
-const selectedClients = ref<Set<string>>(new Set())
+const selectedClients = ref<Set<number>>(new Set())
 const searchInput = ref(props.searchQuery)
 const statusFilter = ref(props.selectedStatus)
 
 // Generate avatar initials and color
 const getAvatarData = (client: Client) => {
-  const initials = `${client.first_name.charAt(0)}${client.last_name.charAt(0)}`.toUpperCase()
+  const initials = `${(client.first_name || '').charAt(0)}${(client.last_name || '').charAt(0)}`.toUpperCase()
   
   // Generate consistent color based on name
   const colors = [
@@ -54,7 +38,7 @@ const getAvatarData = (client: Client) => {
     'bg-orange-500', 'bg-cyan-500', 'bg-lime-500', 'bg-emerald-500'
   ]
   
-  const nameHash = (client.first_name + client.last_name).split('').reduce((acc, char) => {
+  const nameHash = ((client.first_name || '') + (client.last_name || '')).split('').reduce((acc, char) => {
     return acc + char.charCodeAt(0)
   }, 0)
   
@@ -64,38 +48,32 @@ const getAvatarData = (client: Client) => {
 }
 
 // Get status badge style
-const getStatusBadge = (status: Client['status']) => {
-  const badges = {
+const getStatusBadge = (status?: string) => {
+  const badges: Record<string, string> = {
     waiting: 'badge-warning',
     active: 'badge-success', 
     archived: 'badge-neutral'
   }
-  return badges[status] || 'badge-ghost'
+  return badges[status || ''] || 'badge-ghost'
 }
 
 // Filtered clients based on search and status
 const filteredClients = computed(() => {
-  let filtered = props.clients
-
-  // Filter by status
-  if (statusFilter.value !== 'all') {
-    filtered = filtered.filter(client => client.status === statusFilter.value)
-  }
-
-  // Filter by search query
-  if (searchInput.value.trim()) {
-    const query = searchInput.value.toLowerCase().trim()
-    filtered = filtered.filter(client => 
-      client.first_name.toLowerCase().includes(query) ||
-      client.last_name.toLowerCase().includes(query) ||
-      client.email?.toLowerCase().includes(query) ||
-      client.contact_first_name?.toLowerCase().includes(query) ||
-      client.contact_last_name?.toLowerCase().includes(query) ||
-      client.contact_email?.toLowerCase().includes(query) ||
-      client.therapy_title?.toLowerCase().includes(query)
+  if (!props.clients) return []
+  
+  let filtered = props.clients.filter(client => {
+    const query = props.searchQuery?.toLowerCase() || ''
+    const matchesSearch = !query || (
+      (client.first_name || '').toLowerCase().includes(query) ||
+      (client.last_name || '').toLowerCase().includes(query) ||
+      (client.email || '').toLowerCase().includes(query) ||
+      (client.phone || '').toLowerCase().includes(query)
     )
-  }
-
+    const matchesStatus = !props.selectedStatus || props.selectedStatus === 'all' || (client.status || '') === props.selectedStatus
+    
+    return matchesSearch && matchesStatus
+  })
+  
   return filtered
 })
 
@@ -114,7 +92,8 @@ const calculateAge = (dateOfBirth: string) => {
 }
 
 // Toggle client selection
-const toggleClientSelection = (clientId: string) => {
+const toggleClientSelection = (clientId?: number) => {
+  if (!clientId) return
   if (selectedClients.value.has(clientId)) {
     selectedClients.value.delete(clientId)
   } else {
@@ -127,7 +106,7 @@ const toggleAllClients = () => {
   if (selectedClients.value.size === filteredClients.value.length) {
     selectedClients.value.clear()
   } else {
-    selectedClients.value = new Set(filteredClients.value.map(client => client.id))
+    selectedClients.value = new Set(filteredClients.value.map(client => client.id).filter((id): id is number => id !== undefined))
   }
 }
 
@@ -155,7 +134,7 @@ const handleSearchChange = () => {
 
 const handleBulkDelete = () => {
   const selectedIds = Array.from(selectedClients.value)
-  const clientsToDelete = props.clients.filter(client => selectedIds.includes(client.id))
+  const clientsToDelete = props.clients.filter(client => client.id && selectedIds.includes(client.id))
   
   if (clientsToDelete.length === 0) return
   
@@ -184,7 +163,9 @@ const clientCounts = computed(() => {
   }
   
   props.clients.forEach(client => {
-    counts[client.status]++
+    if (client.status && client.status in counts) {
+      (counts as any)[client.status]++
+    }
   })
   
   return counts
@@ -248,11 +229,10 @@ const clientCounts = computed(() => {
           <!-- Head -->
           <thead class="sticky top-0 z-20">
             <tr class="bg-base-200/30 backdrop-blur-sm border-b border-base-300">
-                            <th class="w-12 sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm"></th>
-              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Name</th>
-              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Email</th>
+              <th class="w-12 sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Name</th>
+              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Parent</th>
+              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Therapy</th>
               <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Status</th>
-              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Erstellt</th>
               <th class="text-right sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Aktionen</th>
             </tr>
           </thead>
@@ -265,21 +245,21 @@ const clientCounts = computed(() => {
               class="hover cursor-pointer"
               @click="handleClientClick(client)"
             >
-              <!-- Checkbox -->
+              <!-- Checkbox 
               <th>
                 <label @click.stop>
                   <input 
                     type="checkbox" 
                     class="checkbox checkbox-sm hidden"
-                    :checked="selectedClients.has(client.id)"
+                    :checked="client.id ? selectedClients.has(client.id) : false"
                     @change="toggleClientSelection(client.id)"
                   />
                 </label>
-              </th>
+              </th> -->
               
               <!-- Client Info -->
               <td>
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3 pl-4 pr-2">
                   <!-- Avatar -->
                   <div class="avatar placeholder">
                     <div 
@@ -296,7 +276,7 @@ const clientCounts = computed(() => {
                       {{ client.first_name }} {{ client.last_name }}
                     </div>
                     <div class="text-xs lg:text-sm opacity-50">
-                      Age: {{ calculateAge(client.date_of_birth) }}
+                      Age: {{ client.date_of_birth ? calculateAge(client.date_of_birth) : 'N/A' }}
                       <span v-if="client.email" class="hidden lg:inline">
                         • {{ client.email }}
                       </span>

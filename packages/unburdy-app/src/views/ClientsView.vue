@@ -50,7 +50,7 @@
               </div>
             </div>
             <div class="text-sm opacity-70">
-              Age: {{ calculateAge(selectedClient.date_of_birth) }}
+              Age: {{ selectedClient.date_of_birth ? calculateAge(selectedClient.date_of_birth) : 'N/A' }}
             </div>
             <div class="mt-2">
               <span 
@@ -142,39 +142,81 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import DrawerLayout from '@/components/layout/DrawerLayout.vue'
 import ClientList from '@/components/clients/ClientList.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
 import RightDrawer from '@/components/RightDrawer.vue'
+import { getApiClient } from '@/config/api-config'
+import type { Client } from '@agile-exec/api-client'
 
-interface Client {
-  id: number
-  first_name: string
-  last_name: string
-  date_of_birth: string
-  contact_first_name?: string
-  contact_last_name?: string
-  contact_email?: string
-  contact_phone?: string
-  email?: string
-  phone?: string
-  invoiced_individually?: boolean
-  therapy_title?: string
-  provider_approval_code?: string
-  status: 'waiting' | 'active' | 'archived'
-}
+// Get API client instance using environment configuration
+const apiClient = getApiClient()
 
 // State
-const searchQuery = ref()
+const searchQuery = ref('')
 const selectedStatus = ref<'all' | 'waiting' | 'active' | 'archived'>('all')
 const isDrawerOpen = ref(false)
 const selectedClient = ref<Client | null>(null)
 const drawerPinned = ref(false)
+const clients = ref<Client[]>([])
+const loading = ref(false)
+const error = ref<string | null>(null)
+
+// Load clients when component mounts
+onMounted(async () => {
+  await fetchClients()
+})
+
+// API methods
+const fetchClients = async () => {
+  loading.value = true
+  error.value = null
+  try {
+    const response = await apiClient.getClients({ page: 1, limit: 500 })
+    if (response.success && response.data) {
+      clients.value = Array.isArray(response.data) ? response.data : [response.data]
+    } else {
+      throw new Error(response.error || 'Failed to fetch clients')
+    }
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to fetch clients'
+    console.error('Failed to fetch clients:', err)
+    // Fallback sample data
+    clients.value = [
+      {
+        id: 1,
+        first_name: 'Emma',
+        last_name: 'Johnson',
+        date_of_birth: '2010-03-15',
+        status: 'active'
+      }
+    ]
+  } finally {
+    loading.value = false
+  }
+}
+
+const deleteClientApi = async (id: number) => {
+  loading.value = true
+  try {
+    const response = await apiClient.deleteClient(id)
+    if (response.success) {
+      clients.value = clients.value.filter((c: Client) => c.id !== id)
+    } else {
+      throw new Error(response.error || 'Failed to delete client')
+    }
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to delete client'
+    throw err
+  } finally {
+    loading.value = false
+  }
+}
 
 // Generate avatar initials and color
 const getAvatarData = (client: Client) => {
-  const initials = `${client.first_name.charAt(0)}${client.last_name.charAt(0)}`.toUpperCase()
+  const initials = `${(client.first_name || '').charAt(0)}${(client.last_name || '').charAt(0)}`.toUpperCase()
   
   // Generate consistent color based on name
   const colors = [
@@ -183,7 +225,7 @@ const getAvatarData = (client: Client) => {
     'bg-orange-500', 'bg-cyan-500', 'bg-lime-500', 'bg-emerald-500'
   ]
   
-  const nameHash = (client.first_name + client.last_name).split('').reduce((acc, char) => {
+  const nameHash = ((client.first_name || '') + (client.last_name || '')).split('').reduce((acc: number, char: string) => {
     return acc + char.charCodeAt(0)
   }, 0)
   
@@ -194,12 +236,12 @@ const getAvatarData = (client: Client) => {
 
 // Get status badge style
 const getStatusBadge = (status: Client['status']) => {
-  const badges = {
+  const badges: Record<string, string> = {
     waiting: 'badge-warning',
     active: 'badge-success', 
     archived: 'badge-neutral'
   }
-  return badges[status] || 'badge-ghost'
+  return badges[status || ''] || 'badge-ghost'
 }
 
 // Calculate age from date of birth
@@ -216,137 +258,7 @@ const calculateAge = (dateOfBirth: string) => {
   return age
 }
 
-// Test data - sample clients
-const clients = ref<Client[]>([
-  {
-    id: 1,
-    first_name: 'Emma',
-    last_name: 'Johnson',
-    date_of_birth: '2010-03-15',
-    contact_first_name: 'Sarah',
-    contact_last_name: 'Johnson',
-    contact_email: 'sarah.johnson@email.com',
-    contact_phone: '+1-555-0123',
-    email: 'emma.johnson@email.com',
-    phone: '+1-555-0124',
-    invoiced_individually: false,
-    therapy_title: 'Speech Therapy',
-    provider_approval_code: 'ST-2024-001',
-    status: 'active'
-  },
-  {
-    id: 2,
-    first_name: 'Liam',
-    last_name: 'Smith',
-    date_of_birth: '2008-07-22',
-    contact_first_name: 'Michael',
-    contact_last_name: 'Smith',
-    contact_email: 'michael.smith@email.com',
-    contact_phone: '+1-555-0125',
-    email: 'liam.smith@email.com',
-    phone: '+1-555-0126',
-    invoiced_individually: true,
-    therapy_title: 'Occupational Therapy',
-    provider_approval_code: 'OT-2024-002',
-    status: 'active'
-  },
-  {
-    id: 3,
-    first_name: 'Sophia',
-    last_name: 'Davis',
-    date_of_birth: '2012-11-08',
-    contact_first_name: 'Jennifer',
-    contact_last_name: 'Davis',
-    contact_email: 'jennifer.davis@email.com',
-    contact_phone: '+1-555-0127',
-    email: 'sophia.davis@email.com',
-    phone: '+1-555-0128',
-    invoiced_individually: false,
-    therapy_title: 'Physical Therapy',
-    provider_approval_code: 'PT-2024-003',
-    status: 'waiting'
-  },
-  {
-    id: 4,
-    first_name: 'Mason',
-    last_name: 'Wilson',
-    date_of_birth: '2009-05-14',
-    contact_first_name: 'Robert',
-    contact_last_name: 'Wilson',
-    contact_email: 'robert.wilson@email.com',
-    contact_phone: '+1-555-0129',
-    email: 'mason.wilson@email.com',
-    phone: '+1-555-0130',
-    invoiced_individually: true,
-    therapy_title: 'Behavioral Therapy',
-    provider_approval_code: 'BT-2024-004',
-    status: 'active'
-  },
-  {
-    id: 5,
-    first_name: 'Isabella',
-    last_name: 'Brown',
-    date_of_birth: '2011-01-30',
-    contact_first_name: 'Lisa',
-    contact_last_name: 'Brown',
-    contact_email: 'lisa.brown@email.com',
-    contact_phone: '+1-555-0131',
-    email: 'isabella.brown@email.com',
-    phone: '+1-555-0132',
-    invoiced_individually: false,
-    therapy_title: 'Speech Therapy',
-    provider_approval_code: 'ST-2024-005',
-    status: 'archived'
-  },
-  {
-    id: 6,
-    first_name: 'Ethan',
-    last_name: 'Taylor',
-    date_of_birth: '2007-09-12',
-    contact_first_name: 'David',
-    contact_last_name: 'Taylor',
-    contact_email: 'david.taylor@email.com',
-    contact_phone: '+1-555-0133',
-    email: 'ethan.taylor@email.com',
-    phone: '+1-555-0134',
-    invoiced_individually: true,
-    therapy_title: 'Occupational Therapy',
-    provider_approval_code: 'OT-2024-006',
-    status: 'waiting'
-  },
-  {
-    id: 7,
-    first_name: 'Ava',
-    last_name: 'Anderson',
-    date_of_birth: '2013-04-18',
-    contact_first_name: 'Michelle',
-    contact_last_name: 'Anderson',
-    contact_email: 'michelle.anderson@email.com',
-    contact_phone: '+1-555-0135',
-    email: 'ava.anderson@email.com',
-    phone: '+1-555-0136',
-    invoiced_individually: false,
-    therapy_title: 'Physical Therapy',
-    provider_approval_code: 'PT-2024-007',
-    status: 'active'
-  },
-  {
-    id: 8,
-    first_name: 'Noah',
-    last_name: 'Martinez',
-    date_of_birth: '2010-12-05',
-    contact_first_name: 'Carlos',
-    contact_last_name: 'Martinez',
-    contact_email: 'carlos.martinez@email.com',
-    contact_phone: '+1-555-0137',
-    email: 'noah.martinez@email.com',
-    phone: '+1-555-0138',
-    invoiced_individually: false,
-    therapy_title: 'Speech Therapy',
-    provider_approval_code: 'ST-2024-008',
-    status: 'archived'
-  }
-])
+// Clients are now loaded from the API via the store
 
 // Event handlers
 const handleClientClick = (client: Client) => {
@@ -365,13 +277,20 @@ const handleClientEdit = (client: Client) => {
   // TODO: Open edit modal or navigate to edit form
 }
 
-const handleClientDelete = (client: Client) => {
+const handleClientDelete = async (client: Client) => {
   console.log('Delete client:', client)
-  // TODO: Show confirmation dialog and delete
   if (confirm(`Are you sure you want to delete ${client.first_name} ${client.last_name}?`)) {
-    const index = clients.value.findIndex(c => c.id === client.id)
-    if (index > -1) {
-      clients.value.splice(index, 1)
+    try {
+      if (client.id) {
+        await deleteClientApi(client.id)
+        // Close the drawer if the deleted client was selected
+        if (selectedClient.value?.id === client.id) {
+          closeClientDetails()
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete client:', error)
+      alert('Failed to delete client. Please try again.')
     }
   }
 }

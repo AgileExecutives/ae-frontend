@@ -196,6 +196,17 @@
                 <LocaleSwitcher />
               </div>
             </div>
+            <div class="divider text-xs">Account</div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm">Logout</span>
+              <button class="btn btn-ghost btn-sm" @click="handleLogout">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-linejoin="round" stroke-linecap="round" stroke-width="2" fill="none" stroke="currentColor" class="inline-block size-4">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16,17 21,12 16,7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+              </button>
+            </div>
           </div>
           
           <!-- Desktop: Icon-only with tooltips at bottom -->
@@ -209,6 +220,21 @@
             <div class="tooltip tooltip-right group-hover:tooltip-none" data-tip="Language">
               <LocaleSwitcher />
             </div>
+
+            <!-- Divider for desktop -->
+            <div class="divider my-1"></div>
+
+            <!-- Logout Button -->
+            <div class="tooltip tooltip-right group-hover:tooltip-none" data-tip="Logout">
+              <button class="btn btn-ghost btn-sm" @click="handleLogout">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-linejoin="round" stroke-linecap="round" stroke-width="2" fill="none" stroke="currentColor" class="inline-block size-4">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16,17 21,12 16,7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                <span class="lg:hidden lg:group-hover:inline">Logout</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -218,7 +244,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import ThemeToggle from '@unburdy/base-app/components/ThemeToggle.vue'
 import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 // Import logos
@@ -238,6 +265,8 @@ const emit = defineEmits<{
 }>()
 
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 
 // Get page title from route name or path
 const pageTitle = computed(() => {
@@ -262,6 +291,17 @@ const pageTitle = computed(() => {
 
 const setView = (view: 'week' | 'month' | 'year' | 'day') => {
   emit('viewChange', view)
+}
+
+const handleLogout = async () => {
+  try {
+    await authStore.logout()
+    router.push('/login')
+  } catch (error) {
+    console.error('Logout failed:', error)
+    // Even if logout fails, redirect to login page
+    router.push('/login')
+  }
 }
 </script>
 
