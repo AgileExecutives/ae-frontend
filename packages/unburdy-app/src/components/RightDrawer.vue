@@ -9,18 +9,19 @@
         <slot name="content" />
       </div>
       <div class="drawer-side z-[70]">
-        <label :for="drawerId" aria-label="close sidebar" class="drawer-overlay" v-if="!isPinned"></label>
+        <label :for="drawerId" aria-label="close sidebar" class="drawer-overlay lg:hidden"></label>
+        <label :for="drawerId" aria-label="close sidebar" class="drawer-overlay hidden lg:block" v-if="!isPinned"></label>
         <div class="min-h-full bg-base-200 flex flex-col" :class="[
-          width,
+          `w-full lg:${width}`,
           { 'shadow-xl': !isPinned, 'border-l border-base-300': isPinned }
         ]">
         <!-- Drawer Header -->
         <div class="flex justify-between items-center p-4 border-b border-base-300">
           <h2 class="text-xl font-bold">{{ title }}</h2>
           <div class="flex gap-1">
-            <!-- Pin Toggle Button -->
+            <!-- Pin Toggle Button (Desktop only) -->
             <button 
-              class="btn btn-ghost btn-sm btn-circle tooltip tooltip-left" 
+              class="btn btn-ghost btn-sm btn-circle tooltip tooltip-left hidden lg:flex" 
               :data-tip="isPinned ? 'Unpin drawer' : 'Pin drawer'"
               @click="togglePin"
             >
@@ -35,8 +36,14 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
               </svg>
             </button>
-            <!-- Close Button -->
-            <button class="btn btn-ghost btn-sm btn-circle" @click="close" v-if="!isPinned">
+            <!-- Close Button (Always on mobile, conditionally on desktop) -->
+            <button class="btn btn-ghost btn-sm btn-circle lg:hidden" @click="close">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <!-- Close Button (Desktop - only when not pinned) -->
+            <button class="btn btn-ghost btn-sm btn-circle hidden lg:flex" @click="close" v-if="!isPinned">
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
