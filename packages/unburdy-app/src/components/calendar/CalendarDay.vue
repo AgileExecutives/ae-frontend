@@ -242,8 +242,7 @@ const dayTitle = computed(() => {
 
       <!-- Calendar Body -->
       <div 
-        class="relative overflow-auto"
-        :style="{ height: 'calc(100vh - 16rem - 10px)' }"
+        class="relative overflow-auto flex-1"
       >
         <div class="grid" :style="{ height: `${gridHeight}px`, gridTemplateColumns: isMobile ? '40px 1fr' : '60px 1fr' }">
           <!-- Time Labels Column -->
@@ -315,7 +314,7 @@ const dayTitle = computed(() => {
           </div>
         </div>
       </div>
-      </div>
+    </div>
     </template>
 
     <template #footer>

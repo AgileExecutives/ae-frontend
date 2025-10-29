@@ -1,9 +1,9 @@
 <template>
   <div class="drawer lg:drawer-open">
-    <input id="drawer-toggle" type="checkbox" class="drawer-toggle" />
+    <input id="drawer-toggle" type="checkbox" class="drawer-toggle z-[60]" />
     <div class="drawer-content flex flex-col">
       <!-- Mobile Navbar -->
-      <div class="navbar bg-base-300/30 w-full lg:hidden">
+      <div class="navbar bg-base-300/50 backdrop-blur w-full lg:hidden sticky top-0 z-50">
         <div class="flex-none">
           <label for="drawer-toggle" aria-label="open sidebar" class="btn btn-square btn-ghost">
             <svg
@@ -71,9 +71,9 @@
         <slot />
       </div>
     </div>
-    <div class="drawer-side">
-      <label for="drawer-toggle" aria-label="close sidebar" class="drawer-overlay lg:hidden"></label>
-      <div class="pl-2 w-64 lg:w-14 lg:hover:w-64 bg-base-200/40 flex flex-col items-start min-h-full transition-all duration-300 group">
+    <div class="drawer-side z-[60]">
+      <label for="drawer-toggle" aria-label="close sidebar" class="drawer-overlay lg:hidden z-[55]"></label>
+      <div class="pl-2 w-64 lg:w-14 lg:hover:w-64 bg-base-200 flex flex-col items-start min-h-full transition-all duration-300 group z-[60]">
         
         <!-- Desktop Logo -->
         <div class="hidden lg:flex items-center justify-center w-full my-6 pr-2 border-b border-base-300/30">

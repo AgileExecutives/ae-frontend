@@ -1,7 +1,7 @@
 <template>
   <DrawerLayout :active-view="currentView" @view-change="handleViewChange">
-    <div class="container flex flex-col h-screen mx-auto px-4 py-6">
-      <div class="mb-8 hidden lg:flex justify-between">
+    <div class="container flex flex-col h-full lg:h-screen mx-auto px-4 py-6">
+      <div class="mb-8 hidden lg:flex justify-between sticky top-0 z-40 bg-base-100/80 backdrop-blur-sm py-4 -mx-4 px-4">
         <h1 class="text-3xl font-bold text-base-content">Calendar</h1>
         <div class="flex items-center ">
           <!-- View Toggle Buttons -->

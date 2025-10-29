@@ -181,9 +181,8 @@ const yearTitle = computed(() => {
 
     <template #content>
       <div class="flex flex-col h-full p-0">
-      <div class="bg-base-100/40 flex flex-col" :style="{ height: '80vh' }">
         <!-- Year Grid -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 p-2 lg:p-4 overflow-y-auto flex-1">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 p-2 lg:p-4 overflow-y-auto h-full">
           <div
             v-for="month in monthsData"
             :key="month.index"
@@ -243,7 +242,6 @@ const yearTitle = computed(() => {
             </div>
           </div>
         </div>
-      </div>
       </div>
     </template>
 
