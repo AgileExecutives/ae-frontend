@@ -1,21 +1,32 @@
 <template>
-  <div class="w-full h-full" :class="{ 'lg:flex': isPinned && isOpen }">
+  <div class="w-full h-full relative">
     <div class="drawer drawer-end" :class="[
       { 'lg:drawer-open': isPinned && isOpen },
-      isPinned && isOpen ? 'lg:flex-1' : 'w-full'
+      'w-full'
     ]">
       <input :id="drawerId" type="checkbox" class="drawer-toggle" v-model="isOpen" />
-      <div class="drawer-content transition-all duration-300">
+      <div class="drawer-content transition-all duration-300" :class="{ 
+        'lg:pr-[max(35%,350px)]': isPinned && isOpen 
+      }">
         <slot name="content" />
       </div>
       <div class="drawer-side z-[70]">
         <label :for="drawerId" aria-label="close sidebar" class="drawer-overlay lg:hidden"></label>
         <label :for="drawerId" aria-label="close sidebar" class="drawer-overlay hidden lg:block" v-if="!isPinned"></label>
-        <div class="min-h-full bg-base-200  backdrop-blur flex flex-col drawer-sidebar w-full lg:w-auto" 
-             :class="{ 'shadow-xl': !isPinned, 'border-l border-base-300': isPinned }"
-             :style="{ width: isMobile ? '100%' : props.width }">
-        <!-- Drawer Header -->
-        <div class="flex justify-between items-center p-4 border-b border-base-300">
+        <div class="h-full bg-base-200 backdrop-blur flex flex-col drawer-sidebar w-full" 
+             :class="{ 
+               'shadow-xl': !isPinned, 
+               'border-l border-base-300': isPinned,
+               'lg:fixed lg:right-0 lg:top-0': isPinned && isOpen
+             }"
+             style="min-width: 350px;"
+             :style="{ 
+               width: isMobile ? '100%' : 'max(35%, 350px)',
+               height: isPinned && isOpen ? '100vh' : undefined
+             }">
+        
+        <!-- Drawer Header (Fixed) -->
+        <div class="flex-shrink-0 flex justify-between items-center px-4 py-3 lg:py-5 border-b border-base-300 bg-base-200">
           <h2 class="text-xl font-bold">{{ title }}</h2>
           <div class="flex gap-1">
             <!-- Pin Toggle Button (Desktop only) -->
@@ -50,15 +61,17 @@
           </div>
         </div>
         
-        <!-- Drawer Content -->
-        <div class="flex-1 p-4 overflow-y-auto">
-          <slot name="form" />
+        <!-- Drawer Content (Scrollable) -->
+        <div class="flex-1 overflow-hidden">
+          <div class="h-full p-4 overflow-y-auto">
+            <slot name="form" />
+          </div>
         </div>
         
-        <!-- Drawer Footer -->
-        <div class="p-4 border-t border-base-300 bg-base-100">
+        <!-- Drawer Footer (Fixed) -->
+        <div class="flex-shrink-0 p-4 border-t border-base-300 bg-base-100">
           <div class="flex gap-2">
-            <button class="btn btn-ghost flex-1" @click="close">Cancel</button>
+            <button class="btn btn-neutral btn-outline btn-sm flex-1" @click="close">Cancel</button>
             <slot name="actions" />
           </div>
         </div>
@@ -145,5 +158,34 @@ defineExpose({
 /* Ensure drawer appears above other content */
 .drawer-side {
   z-index: 70;
+}
+
+/* Ensure proper height and scrolling behavior */
+.drawer-sidebar {
+  height: 100vh;
+  max-height: 100vh;
+}
+
+/* Custom scrollbar styling */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.8);
 }
 </style>

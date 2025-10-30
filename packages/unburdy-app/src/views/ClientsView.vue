@@ -4,7 +4,6 @@
       v-model="isDrawerOpen"
       :title="selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : 'Client Details'"
       id="client-details-drawer"
-      width="480px"
       v-model:pinned="drawerPinned"
       @close="closeClientDetails"
     >
@@ -35,109 +34,127 @@
             />
           </div>
         </div>
+        
+        <!-- Mobile Floating Action Button -->
+        <button 
+          class="btn btn-primary btn-circle fixed bottom-6 right-6 z-50 lg:hidden shadow-lg"
+          @click="handleAddClient"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
       </template>
 
       <template #form>
-        <div v-if="selectedClient" class="space-y-6">
-          <!-- Client Avatar and Basic Info -->
-          <div class="text-center">
-            <div class="avatar placeholder mb-4">
-              <div 
-                class="w-20 h-20 rounded-full text-white text-lg font-semibold flex items-center justify-center"
-                :class="getAvatarData(selectedClient).colorClass"
-              >
-                {{ getAvatarData(selectedClient).initials }}
-              </div>
-            </div>
-            <div class="text-sm opacity-70">
-              Age: {{ selectedClient.date_of_birth ? calculateAge(selectedClient.date_of_birth) : 'N/A' }}
-            </div>
-            <div class="mt-2">
-              <span 
-                class="badge badge-lg capitalize"
-                :class="getStatusBadge(selectedClient.status)"
-              >
-                {{ selectedClient.status }}
-              </span>
-            </div>
-          </div>
-
-          <!-- Personal Information -->
-          <div class="space-y-3">
-            <h4 class="font-semibold text-sm uppercase tracking-wide opacity-70">Personal Information</h4>
-            <div class="space-y-2">
-              <div class="flex justify-between">
-                <span class="text-sm opacity-70">Date of Birth:</span>
-                <span class="text-sm">{{ selectedClient.date_of_birth }}</span>
-              </div>
-              <div v-if="selectedClient.email" class="flex justify-between">
-                <span class="text-sm opacity-70">Email:</span>
-                <span class="text-sm">{{ selectedClient.email }}</span>
-              </div>
-              <div v-if="selectedClient.phone" class="flex justify-between">
-                <span class="text-sm opacity-70">Phone:</span>
-                <span class="text-sm">{{ selectedClient.phone }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Contact Person -->
-          <div v-if="selectedClient.contact_first_name || selectedClient.contact_last_name" class="space-y-3">
-            <h4 class="font-semibold text-sm uppercase tracking-wide opacity-70">Contact Person</h4>
-            <div class="space-y-2">
-              <div class="flex justify-between">
-                <span class="text-sm opacity-70">Name:</span>
-                <span class="text-sm">{{ selectedClient.contact_first_name }} {{ selectedClient.contact_last_name }}</span>
-              </div>
-              <div v-if="selectedClient.contact_email" class="flex justify-between">
-                <span class="text-sm opacity-70">Email:</span>
-                <span class="text-sm">{{ selectedClient.contact_email }}</span>
-              </div>
-              <div v-if="selectedClient.contact_phone" class="flex justify-between">
-                <span class="text-sm opacity-70">Phone:</span>
-                <span class="text-sm">{{ selectedClient.contact_phone }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Therapy Information -->
-          <div v-if="selectedClient.therapy_title || selectedClient.provider_approval_code" class="space-y-3">
-            <h4 class="font-semibold text-sm uppercase tracking-wide opacity-70">Therapy Information</h4>
-            <div class="space-y-2">
-              <div v-if="selectedClient.therapy_title" class="flex justify-between">
-                <span class="text-sm opacity-70">Title:</span>
-                <span class="text-sm">{{ selectedClient.therapy_title }}</span>
-              </div>
-              <div v-if="selectedClient.provider_approval_code" class="flex justify-between">
-                <span class="text-sm opacity-70">Approval Code:</span>
-                <span class="text-sm">{{ selectedClient.provider_approval_code }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-sm opacity-70">Individual Invoicing:</span>
-                <span class="text-sm">{{ selectedClient.invoiced_individually ? 'Yes' : 'No' }}</span>
-              </div>
-            </div>
-          </div>
+        <div v-if="(selectedClient || isEditMode) && isDrawerOpen">
+          <ClientDetail 
+            v-if="!isEditMode"
+            :client="selectedClient" 
+          />
+          <ClientEdit 
+            v-else
+            :client="selectedClient"
+            @save="saveClient"
+            @cancel="cancelEdit"
+            @name-change="handleNameChange"
+          />
         </div>
       </template>
 
       <template #actions>
-        <button 
-          v-if="selectedClient"
-          class="btn btn-primary flex-1"
-          @click="handleClientEdit(selectedClient)"
-        >
-          Edit Client
-        </button>
-        <button 
-          v-if="selectedClient"
-          class="btn btn-error btn-outline"
-          @click="handleClientDelete(selectedClient)"
-        >
-          Delete
-        </button>
+        <div v-if="(selectedClient || isEditMode) && isDrawerOpen" class="flex gap-2">
+          <template v-if="isEditMode">
+            <button
+              class="btn btn-primary btn-sm flex-1"
+              @click="submitEdit"
+            >
+              Save
+            </button>
+          </template>
+          <template v-else>
+            <button 
+              class="btn btn-error btn-outline btn-sm"
+              @click="showDeleteModal(selectedClient)"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete
+            </button>
+            <button 
+              class="btn btn-primary btn-sm ml-auto"
+              @click="editClient"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit
+            </button>
+          </template>
+        </div>
       </template>
     </RightDrawer>
+
+    <!-- Delete/Archive Modal -->
+    <div class="modal" :class="{ 'modal-open': showDeleteConfirmModal }" id="delete-confirm-modal">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg">What would you like to do with this client?</h3>
+        <div v-if="clientToDelete" class="py-4">
+          <p class="mb-4">
+            Choose how to handle <strong>{{ clientToDelete.first_name }} {{ clientToDelete.last_name }}</strong>:
+          </p>
+          <div class="space-y-3">
+            <div class="alert alert-info">
+              <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <h4 class="font-bold">Archive Client (Recommended)</h4>
+                <p class="text-sm">Client data is preserved but hidden from active lists. Can be restored later.</p>
+              </div>
+            </div>
+            <div class="alert alert-warning">
+              <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <div>
+                <h4 class="font-bold">Permanently Delete</h4>
+                <p class="text-sm">All client data will be permanently removed. This action cannot be undone.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-action">
+          <button 
+            class="btn btn-outline" 
+            @click="closeDeleteModal"
+          >
+            Cancel
+          </button>
+          <button 
+            class="btn btn-warning" 
+            @click="permanentlyDeleteClient"
+            :disabled="loading"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete Forever
+          </button>
+          <button 
+            class="btn btn-primary" 
+            @click="archiveClient"
+            :disabled="loading"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8l6 6 6-6" />
+            </svg>
+            Archive Client
+          </button>
+        </div>
+      </div>
+    </div>
   </DrawerLayout>
 </template>
 
@@ -145,6 +162,8 @@
 import { ref, onMounted, computed } from 'vue'
 import DrawerLayout from '@/components/layout/DrawerLayout.vue'
 import ClientList from '@/components/clients/ClientList.vue'
+import ClientDetail from '@/components/clients/ClientDetail.vue'
+import ClientEdit from '@/components/clients/ClientEdit.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
 import RightDrawer from '@/components/RightDrawer.vue'
 import { getApiClient } from '@/config/api-config'
@@ -160,9 +179,12 @@ const selectedStatus = ref<'all' | 'waiting' | 'active' | 'archived'>('active')
 const isDrawerOpen = ref(false)
 const selectedClient = ref<Client | null>(null)
 const drawerPinned = ref(false)
+const isEditMode = ref(false)
 const clients = ref<Client[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
+const showDeleteConfirmModal = ref(false)
+const clientToDelete = ref<Client | null>(null)
 
 // Load clients when component mounts
 onMounted(async () => {
@@ -232,67 +254,97 @@ const deleteClientApi = async (id: number) => {
   }
 }
 
-// Generate avatar initials and color
-const getAvatarData = (client: Client) => {
-  const initials = `${(client.first_name || '').charAt(0)}${(client.last_name || '').charAt(0)}`.toUpperCase()
-  
-  // Generate consistent color based on name
-  const colors = [
-    'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
-    'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500',
-    'bg-orange-500', 'bg-cyan-500', 'bg-lime-500', 'bg-emerald-500'
-  ]
-  
-  const nameHash = ((client.first_name || '') + (client.last_name || '')).split('').reduce((acc: number, char: string) => {
-    return acc + char.charCodeAt(0)
-  }, 0)
-  
-  const colorClass = colors[nameHash % colors.length]
-  
-  return { initials, colorClass }
-}
+const submitEdit = () => {
 
-// Get status badge style
-const getStatusBadge = (status: Client['status']) => {
-  const badges: Record<string, string> = {
-    waiting: 'badge-warning',
-    active: 'badge-success', 
-    archived: 'badge-neutral'
+}
+// Helper functions are now in ClientDetail and ClientEdit components
+
+
+
+const saveClient = async (updatedClient: Client) => {
+  if (!selectedClient.value) return
+  
+  try {
+    if (appConfig.MOCK_API) {
+      // In mock mode, just update the client in the list
+      const index = clients.value.findIndex(c => c.id === updatedClient.id)
+      if (index !== -1) {
+        clients.value[index] = updatedClient
+        selectedClient.value = updatedClient
+      }
+    } else {
+      // TODO: Implement API update when backend is ready
+      // const response = await apiClient.updateClient(updatedClient.id, updatedClient)
+      // selectedClient.value = response.data
+      console.log('API update not implemented yet')
+    }
+    isEditMode.value = false
+  } catch (error) {
+    console.error('Failed to update client:', error)
   }
-  return badges[status || ''] || 'badge-ghost'
 }
 
-// Calculate age from date of birth
-const calculateAge = (dateOfBirth: string) => {
-  const today = new Date()
-  const birthDate = new Date(dateOfBirth)
-  let age = today.getFullYear() - birthDate.getFullYear()
-  const monthDiff = today.getMonth() - birthDate.getMonth()
+const archiveClient = async () => {
+  if (!clientToDelete.value?.id) return
   
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--
+  loading.value = true
+  try {
+    if (appConfig.MOCK_API) {
+      // In mock mode, update the client status to archived
+      const index = clients.value.findIndex(c => c.id === clientToDelete.value!.id)
+      if (index !== -1) {
+        clients.value[index] = { ...clients.value[index], status: 'archived' }
+        // Update selected client if it's the same one
+        if (selectedClient.value?.id === clientToDelete.value.id) {
+          selectedClient.value = clients.value[index]
+        }
+      }
+    } else {
+      // Use real API to update client status
+      const response = await apiClient.updateClient(clientToDelete.value.id, {
+        ...clientToDelete.value,
+        status: 'archived'
+      })
+      if (response.success && response.data) {
+        // Update the client in the list
+        const index = clients.value.findIndex(c => c.id === clientToDelete.value!.id)
+        if (index !== -1) {
+          clients.value[index] = response.data
+          // Update selected client if it's the same one
+          if (selectedClient.value?.id === clientToDelete.value.id) {
+            selectedClient.value = response.data
+          }
+        }
+      } else {
+        throw new Error(response.error || 'Failed to archive client')
+      }
+    }
+    closeDeleteModal()
+  } catch (error) {
+    console.error('Failed to archive client:', error)
+    alert('Failed to archive client. Please try again.')
+  } finally {
+    loading.value = false
   }
+}
+
+const permanentlyDeleteClient = async () => {
+  if (!clientToDelete.value?.id) return
   
-  return age
-}
-
-// Clients are now loaded from the API via the store
-
-// Event handlers
-const handleClientClick = (client: Client) => {
-  console.log('Client clicked:', client)
-  selectedClient.value = client
-  isDrawerOpen.value = true
-}
-
-const closeClientDetails = () => {
-  isDrawerOpen.value = false
-  selectedClient.value = null
-}
-
-const handleClientEdit = (client: Client) => {
-  console.log('Edit client:', client)
-  // TODO: Open edit modal or navigate to edit form
+  loading.value = true
+  try {
+    await deleteClientApi(clientToDelete.value.id)
+    // Close the drawer if the deleted client was selected
+    if (selectedClient.value?.id === clientToDelete.value.id) {
+      closeClientDetails()
+    }
+    closeDeleteModal()
+  } catch (error) {
+    console.error('Failed to delete client:', error)
+    alert('Failed to delete client. Please try again.')
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleClientDelete = async (client: Client) => {
@@ -313,6 +365,64 @@ const handleClientDelete = async (client: Client) => {
   }
 }
 
+// UI State Event handlers
+const handleAddClient = () => {
+  console.log('Add new client')
+  selectedClient.value = null
+  isDrawerOpen.value = true
+  isEditMode.value = true
+}
+
+const handleClientEdit = (client: Client) => {
+  console.log('Edit client:', client)
+  selectedClient.value = client
+  isDrawerOpen.value = true
+  isEditMode.value = true
+}
+
+const handleClientClick = (client: Client) => {
+  console.log('Client clicked:', client)
+  selectedClient.value = client
+  isDrawerOpen.value = true
+  isEditMode.value = false
+}
+
+const closeClientDetails = () => {
+  isDrawerOpen.value = false
+  selectedClient.value = null
+  isEditMode.value = false
+}
+
+const handleNameChange = (firstName: string, lastName: string) => {
+  if (selectedClient.value) {
+    selectedClient.value = {
+      ...selectedClient.value,
+      first_name: firstName,
+      last_name: lastName
+    }
+  }
+}
+
+const editClient = () => {
+  isEditMode.value = true
+}
+
+const cancelEdit = () => {
+  isEditMode.value = false
+}
+
+// Modal functions
+const showDeleteModal = (client: Client) => {
+  clientToDelete.value = client
+  showDeleteConfirmModal.value = true
+}
+
+const closeDeleteModal = () => {
+  showDeleteConfirmModal.value = false
+  clientToDelete.value = null
+}
+
+
 const handleStatusFilter = (status: 'all' | 'waiting' | 'active' | 'archived') => {
   selectedStatus.value = status
   console.log('Status filter changed:', status)
@@ -323,8 +433,5 @@ const handleSearchChange = (query: string) => {
   console.log('Search query changed:', query)
 }
 
-const handleAddClient = () => {
-  console.log('Add new client')
-  // TODO: Open add client modal or navigate to add form
-}
+
 </script>

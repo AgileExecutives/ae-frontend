@@ -336,7 +336,7 @@ const currentStatusLabel = computed(() => {
               </th> -->
               
               <!-- Client Info -->
-              <td>
+              <td class="py-2">
                 <div class="flex items-center gap-2 lg:gap-3 lg:pl-4 pl-0 pr-0">
                   <!-- Avatar -->
                   <div class="avatar placeholder">
@@ -350,7 +350,7 @@ const currentStatusLabel = computed(() => {
                   
                   <!-- Name and Details -->
                   <div class="overflow-hidden">
-                    <div class="font-bold text-xs lg:text-base text-nowrap text-ellipsis">
+                    <div class="font-bold text-sm pb-1 lg:text-base text-nowrap text-ellipsis">
                       {{ client.first_name }} {{ client.last_name }} <span v-if="client.date_of_birth" class="text-xs opacity-50 font-normal">
                         ({{ calculateAge(client.date_of_birth) }}, {{ shortGender(client.gender) }})
                       </span>
@@ -369,7 +369,7 @@ const currentStatusLabel = computed(() => {
               <!-- Contact Info (Desktop only) -->
               <td>
                 <div v-if="client.contact_first_name || client.contact_last_name" class="w-30 lg:w-auto overflow-hidden">
-                  <div class="font-semibold text-xs lg:text-sm">
+                  <div class="font-semibold text-xs pb-1 lg:text-sm">
                     {{ client.contact_first_name }} {{ client.contact_last_name }}
                   </div>
                   <div class="text-xs opacity-50">
@@ -383,7 +383,7 @@ const currentStatusLabel = computed(() => {
               <!-- Therapy Info (Desktop only) -->
               <td class="hidden lg:table-cell">
                 <div v-if="client.therapy_title">
-                  <div class="font-medium text-sm">{{ client.therapy_title }}</div>
+                  <div class="font-medium text-sm pb-1">{{ client.therapy_title }}</div>
                   <div class="text-xs opacity-50">
                     <div v-if="client.cost_provider">{{ client.cost_provider.department }}, {{ client.cost_provider.organization }}</div>
                     <div v-if="client.provider_approval_code">Approval: {{ client.provider_approval_code }} from {{ localeDatesString(client.provider_approval_date) }}</div>
@@ -431,14 +431,14 @@ const currentStatusLabel = computed(() => {
 
     <template #footer>
       <!-- Summary Stats -->
-      <div class="flex gap-4 text-xs">
-        <span class="badge badge-success badge-outline">
+      <div class="hidden lg:flex gap-4 pt-3 w-full justify-end items-center text-xs">
+        <span class="badge badge-xs lg:badge-sm badge-success badge-outline">
           {{ clientCounts.active }} Active
         </span>
-        <span class="badge badge-warning badge-outline">
+        <span class="badge badge-xs lg:badge-sm badge-warning badge-outline">
           {{ clientCounts.waiting }} Waiting
         </span>
-        <span class="badge badge-neutral badge-outline">
+        <span class="badge badge-xs lg:badge-sm badge-neutral badge-outline">
           {{ clientCounts.archived }} Archived
         </span>
       </div>

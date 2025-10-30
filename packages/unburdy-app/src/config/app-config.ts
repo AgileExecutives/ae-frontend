@@ -4,7 +4,61 @@
 
 export const appConfig = {
   // Mock API configuration
-  MOCK_API: true, // Set to true to use mock data instead of real API calls
+  MOCK_API: false, // Set to true to use mock data instead of real API calls
+}
+
+// Mock cost provider data
+export const MOCK_COST_PROVIDER_DATA = {
+  "cost_providers": [
+    {
+      "id": 395,
+      "tenant_id": 1,
+      "organization": "Landratsamt Breisgau-Hochschwarzwald",
+      "department": "Jugendamt",
+      "street_address": "Berliner Allee 3",
+      "zip": "79114",
+      "city": "Freiburg"
+    },
+    {
+      "id": 402,
+      "tenant_id": 1,
+      "organization": "Stadtkreis Ulm",
+      "department": "Jugendamt", 
+      "street_address": "Olgastraße 152",
+      "zip": "89073",
+      "city": "Ulm"
+    },
+    {
+      "id": 403,
+      "tenant_id": 1,
+      "organization": "Stadt Stuttgart",
+      "department": "Jugendamt",
+      "street_address": "Wilhelmstraße 3",
+      "zip": "70182",
+      "city": "Stuttgart"
+    },
+    {
+      "id": 404,
+      "tenant_id": 1,
+      "organization": "Landkreis Esslingen",
+      "department": "Jugendamt",
+      "street_address": "Pulverwiesen 11",
+      "zip": "73728",
+      "city": "Esslingen am Neckar"
+    },
+    {
+      "id": 405,
+      "tenant_id": 1,
+      "organization": "Stadt Karlsruhe",
+      "department": "Jugendamt",
+      "street_address": "Kaiserallee 4",
+      "zip": "76133",
+      "city": "Karlsruhe"
+    }
+  ],
+  "total": 5,
+  "page": 1,
+  "limit": 50
 }
 
 // Mock client data for development/testing
