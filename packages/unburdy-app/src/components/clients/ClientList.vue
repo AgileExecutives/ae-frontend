@@ -53,7 +53,7 @@ const getAvatarData = (client: Client) => {
     'bg-orange-500', 'bg-cyan-500', 'bg-lime-500', 'bg-emerald-500'
   ]
   
-  const nameHash = ((client.first_name || '') + (client.last_name || '')).split('').reduce((acc, char) => {
+  const nameHash = ((client.first_name || '') + (client.last_name || '')).split('').reduce((acc: number, char: string) => {
     return acc + char.charCodeAt(0)
   }, 0)
   
@@ -385,8 +385,7 @@ const currentStatusLabel = computed(() => {
                 <div v-if="client.therapy_title">
                   <div class="font-medium text-sm pb-1">{{ client.therapy_title }}</div>
                   <div class="text-xs opacity-50">
-                    <div v-if="client.cost_provider">{{ client.cost_provider.department }}, {{ client.cost_provider.organization }}</div>
-                    <div v-if="client.provider_approval_code">Approval: {{ client.provider_approval_code }} from {{ localeDatesString(client.provider_approval_date) }}</div>
+                    <div v-if="client.provider_approval_code">Approval: {{ client.provider_approval_code }}</div>
                     <div v-if="client.invoiced_individually">Individual invoicing</div>
                   </div>
                 </div>

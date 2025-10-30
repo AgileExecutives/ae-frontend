@@ -297,16 +297,7 @@
                 :class="formClasses.input"
               />
             </div>
-            <div class="form-control">
-              <label class="label">
-                <span :class="formClasses.label">Datum</span>
-              </label>       
-              <input 
-                v-model="formData.provider_approval_date"
-                type="date" 
-                :class="formClasses.input"
-              />
-            </div>
+
           </div>
         </div>
       </div>
@@ -461,15 +452,22 @@ const FORM_SIZE: 'xs' | 'sm' | 'md' | 'lg' = 'md'
 
 // Computed size classes based on the centralized size setting
 const formClasses = computed(() => {
-  const labelSize = FORM_SIZE === 'sm' ? 'xs' : FORM_SIZE === 'md' ? 'sm' : FORM_SIZE === 'lg' ? 'base' : 'xs'
-  const marginTop = FORM_SIZE === 'xs' ? '2' : FORM_SIZE === 'sm' ? '6' : '8'
+  // Map form size to label size
+  const sizeMap: Record<string, string> = {
+    xs: 'xs',
+    sm: 'xs', 
+    md: 'sm',
+    lg: 'base'
+  }
+  const labelSize = sizeMap[FORM_SIZE] || 'xs'
+  
   return {
     input: `input input-${FORM_SIZE} input-bordered`,
     select: `select select-${FORM_SIZE} select-bordered`, 
     textarea: `textarea textarea-${FORM_SIZE} textarea-bordered`,
     checkbox: `checkbox checkbox-${FORM_SIZE}`,
     label: `label-text text-${labelSize}`,
-    heading: `font-semibold text-${FORM_SIZE} uppercase tracking-wide opacity-70 mt-${marginTop}`,
+    heading: `font-semibold text-${FORM_SIZE} uppercase tracking-wide opacity-70`
   }
 })
 
