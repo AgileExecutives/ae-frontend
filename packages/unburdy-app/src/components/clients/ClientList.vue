@@ -196,7 +196,13 @@ const clientCounts = computed(() => {
 // Format date to locale string
 const localeDatesString = (date: string) => {
     return new Date(date).toLocaleDateString()
-}   
+}
+
+// Format gender to short string
+const shortGender = (gender?: string) => {
+  if (!gender) return ''
+  return gender.charAt(0).toLowerCase()
+}
 
 // Dynamic title based on selected status - hidden on mobile
 const dynamicTitle = computed(() => {
@@ -294,11 +300,11 @@ const currentStatusLabel = computed(() => {
         <!-- Client Table -->
         <div class="flex-1 min-h-0 overflow-hidden">
           <div class="overflow-auto h-full">
-        <table class="table table-sm lg:table-md">
+        <table class="table table-xs lg:table-md">
           <!-- Head -->
           <thead class="sticky top-0 z-20">
             <tr class="hidden lg:table-row bg-base-200/30 backdrop-blur-sm border-b border-base-300">
-              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Client</th>
+              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm"><div class="pl-5">Client</div></th>
               <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Contact</th>
               <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Therapy</th>
               <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Status</th>
@@ -306,7 +312,6 @@ const currentStatusLabel = computed(() => {
             <tr class="lg:hidden bg-base-200/30 backdrop-blur-sm border-b border-base-300">
               <th class="w-12 sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Name</th>
               <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Parent</th>
-              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Therapy</th>
             </tr>
           </thead>
           
@@ -332,7 +337,7 @@ const currentStatusLabel = computed(() => {
               
               <!-- Client Info -->
               <td>
-                <div class="flex items-center gap-2 lg:gap-3 lg:pl-4 pr-2">
+                <div class="flex items-center gap-2 lg:gap-3 lg:pl-4 pl-0 pr-0">
                   <!-- Avatar -->
                   <div class="avatar placeholder">
                     <div 
@@ -344,19 +349,16 @@ const currentStatusLabel = computed(() => {
                   </div>
                   
                   <!-- Name and Details -->
-                  <div>
-                    <div class="font-bold text-sm lg:text-base">
-                      {{ client.first_name }} {{ client.last_name }}
-                      <span v-if="client.date_of_birth" class="hidden lg:inline text-xs opacity-50 font-normal">
-                        ({{ calculateAge(client.date_of_birth) }} yrs., {{ client.gender }})
+                  <div class="overflow-hidden">
+                    <div class="font-bold text-xs lg:text-base text-nowrap text-ellipsis">
+                      {{ client.first_name }} {{ client.last_name }} <span v-if="client.date_of_birth" class="text-xs opacity-50 font-normal">
+                        ({{ calculateAge(client.date_of_birth) }}, {{ shortGender(client.gender) }})
                       </span>
                     </div>
-                    <!-- Mobile: Age only -->
-                    <div class="text-xs lg:hidden opacity-50">
-                      Age: {{ client.date_of_birth ? calculateAge(client.date_of_birth) : 'N/A' }}
-                    </div>
+                    <div class="ftext-xs lg:text-sm text-nowrap text-ellipsis max-w-50">{{ client.therapy_title }}</div>
+
                     <!-- Desktop: Email and Phone -->
-                    <div class="hidden lg:block text-xs opacity-50">
+                    <div class="text-xs opacity-50">
                       <div v-if="client.email">{{ client.email }}</div>
                       <div v-if="client.phone">{{ client.phone }}</div>
                     </div>
@@ -365,9 +367,9 @@ const currentStatusLabel = computed(() => {
               </td>
               
               <!-- Contact Info (Desktop only) -->
-              <td class="hidden lg:table-cell">
-                <div v-if="client.contact_first_name || client.contact_last_name">
-                  <div class="font-medium text-sm">
+              <td>
+                <div v-if="client.contact_first_name || client.contact_last_name" class="w-30 lg:w-auto overflow-hidden">
+                  <div class="font-semibold text-xs lg:text-sm">
                     {{ client.contact_first_name }} {{ client.contact_last_name }}
                   </div>
                   <div class="text-xs opacity-50">

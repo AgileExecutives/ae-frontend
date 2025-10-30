@@ -148,6 +148,7 @@ import ClientList from '@/components/clients/ClientList.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
 import RightDrawer from '@/components/RightDrawer.vue'
 import { getApiClient } from '@/config/api-config'
+import { appConfig, MOCK_CLIENT_DATA } from '@/config/app-config'
 import type { Client } from '@agile-exec/api-client'
 
 // Get API client instance using environment configuration
@@ -172,7 +173,18 @@ onMounted(async () => {
 const fetchClients = async () => {
   loading.value = true
   error.value = null
+  
   try {
+    // Use mock data if MOCK_API is enabled
+    if (appConfig.MOCK_API) {
+      console.log('Using mock client data (MOCK_API enabled)')
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300))
+      clients.value = MOCK_CLIENT_DATA.clients as Client[]
+      return
+    }
+
+    // Use real API
     const response = await apiClient.getClients({ page: 1, limit: 500 })
     if (response.success && response.data) {
       clients.value = Array.isArray(response.data) ? response.data : [response.data]
@@ -182,16 +194,12 @@ const fetchClients = async () => {
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to fetch clients'
     console.error('Failed to fetch clients:', err)
-    // Fallback sample data
-    clients.value = [
-      {
-        id: 1,
-        first_name: 'Emma',
-        last_name: 'Johnson',
-        date_of_birth: '2010-03-15',
-        status: 'active'
-      }
-    ]
+    
+    // Fallback to mock data on API error if not already using mock
+    if (!appConfig.MOCK_API) {
+      console.log('API failed, falling back to mock data')
+      clients.value = MOCK_CLIENT_DATA.clients as Client[]
+    }
   } finally {
     loading.value = false
   }
@@ -200,6 +208,16 @@ const fetchClients = async () => {
 const deleteClientApi = async (id: number) => {
   loading.value = true
   try {
+    // Use mock behavior if MOCK_API is enabled
+    if (appConfig.MOCK_API) {
+      console.log(`Mock delete client with id: ${id}`)
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 200))
+      clients.value = clients.value.filter((c: Client) => c.id !== id)
+      return
+    }
+
+    // Use real API
     const response = await apiClient.deleteClient(id)
     if (response.success) {
       clients.value = clients.value.filter((c: Client) => c.id !== id)
