@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { ChevronLeft, ChevronRight, Users, Plus, Search } from 'lucide-vue-next'
 import ViewCard from '../ViewCard.vue'
 import type { Client } from '@agile-exec/api-client'
@@ -26,6 +26,21 @@ const emit = defineEmits<{
 const selectedClients = ref<Set<number>>(new Set())
 const searchInput = ref(props.searchQuery)
 const statusFilter = ref(props.selectedStatus)
+
+// Screen size detection
+const isMobile = ref(false)
+const updateScreenSize = () => {
+  isMobile.value = window.innerWidth < 1024
+}
+
+onMounted(() => {
+  updateScreenSize()
+  window.addEventListener('resize', updateScreenSize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateScreenSize)
+})
 
 // Generate avatar initials and color
 const getAvatarData = (client: Client) => {
@@ -128,6 +143,13 @@ const handleStatusFilter = (status: 'all' | 'waiting' | 'active' | 'archived') =
   emit('statusFilter', status)
 }
 
+const handleDropdownChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement
+  if (target) {
+    handleStatusFilter(target.value as 'all' | 'waiting' | 'active' | 'archived')
+  }
+}
+
 const handleSearchChange = () => {
   emit('searchChange', searchInput.value)
 }
@@ -171,8 +193,18 @@ const clientCounts = computed(() => {
   return counts
 })
 
-// Dynamic title based on selected status
+// Format date to locale string
+const localeDatesString = (date: string) => {
+    return new Date(date).toLocaleDateString()
+}   
+
+// Dynamic title based on selected status - hidden on mobile
 const dynamicTitle = computed(() => {
+  // Hide title on mobile
+  if (isMobile.value) {
+    return ''
+  }
+  
   const statusTitles = {
     all: 'Clients',
     waiting: 'Waiting List', 
@@ -182,13 +214,44 @@ const dynamicTitle = computed(() => {
   const baseTitle = statusTitles[props.selectedStatus] || 'Clients'
   return `${baseTitle} (${filteredClients.value.length})`
 })
+
+// Status options for dropdown
+const statusOptions = computed(() => [
+  { value: 'active', label: 'Active', count: clientCounts.value.active },
+  { value: 'waiting', label: 'Waiting', count: clientCounts.value.waiting },
+  { value: 'archived', label: 'Archived', count: clientCounts.value.archived }
+])
+
+// Current status label for dropdown display
+const currentStatusLabel = computed(() => {
+  const option = statusOptions.value.find(opt => opt.value === statusFilter.value)
+  return option ? `${option.label} (${option.count})` : 'Active'
+})
 </script>
 
 <template>
   <ViewCard :title="dynamicTitle">
     <template #actions>
-      <div class="flex items-center gap-2">
-        <div class="btn-group">
+      <div class="flex items-center justify-between gap-2">
+        <!-- Mobile: Dropdown -->
+        <div class="lg:hidden flex-grow">
+          <select 
+            :value="statusFilter"
+            @change="handleDropdownChange"
+            class="select select-sm select-bordered w-38 max-w-xs"
+          >
+            <option 
+              v-for="option in statusOptions" 
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }} ({{ option.count }})
+            </option>
+          </select>
+        </div>
+
+        <!-- Desktop: Button Group -->
+        <div class="hidden lg:flex btn-group">
           <button 
             class="btn btn-sm"
             :class="{ 'btn-active': statusFilter === 'active' }"
@@ -234,12 +297,16 @@ const dynamicTitle = computed(() => {
         <table class="table table-sm lg:table-md">
           <!-- Head -->
           <thead class="sticky top-0 z-20">
-            <tr class="bg-base-200/30 backdrop-blur-sm border-b border-base-300">
+            <tr class="hidden lg:table-row bg-base-200/30 backdrop-blur-sm border-b border-base-300">
+              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Client</th>
+              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Contact</th>
+              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Therapy</th>
+              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Status</th>
+            </tr>
+            <tr class="lg:hidden bg-base-200/30 backdrop-blur-sm border-b border-base-300">
               <th class="w-12 sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Name</th>
               <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Parent</th>
               <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Therapy</th>
-              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Status</th>
-              <th class="text-right sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Aktionen</th>
             </tr>
           </thead>
           
@@ -265,7 +332,7 @@ const dynamicTitle = computed(() => {
               
               <!-- Client Info -->
               <td>
-                <div class="flex items-center gap-3 pl-4 pr-2">
+                <div class="flex items-center gap-2 lg:gap-3 lg:pl-4 pr-2">
                   <!-- Avatar -->
                   <div class="avatar placeholder">
                     <div 
@@ -280,12 +347,18 @@ const dynamicTitle = computed(() => {
                   <div>
                     <div class="font-bold text-sm lg:text-base">
                       {{ client.first_name }} {{ client.last_name }}
-                    </div>
-                    <div class="text-xs lg:text-sm opacity-50">
-                      Age: {{ client.date_of_birth ? calculateAge(client.date_of_birth) : 'N/A' }}
-                      <span v-if="client.email" class="hidden lg:inline">
-                        • {{ client.email }}
+                      <span v-if="client.date_of_birth" class="hidden lg:inline text-xs opacity-50 font-normal">
+                        ({{ calculateAge(client.date_of_birth) }} yrs., {{ client.gender }})
                       </span>
+                    </div>
+                    <!-- Mobile: Age only -->
+                    <div class="text-xs lg:hidden opacity-50">
+                      Age: {{ client.date_of_birth ? calculateAge(client.date_of_birth) : 'N/A' }}
+                    </div>
+                    <!-- Desktop: Email and Phone -->
+                    <div class="hidden lg:block text-xs opacity-50">
+                      <div v-if="client.email">{{ client.email }}</div>
+                      <div v-if="client.phone">{{ client.phone }}</div>
                     </div>
                   </div>
                 </div>
@@ -298,7 +371,8 @@ const dynamicTitle = computed(() => {
                     {{ client.contact_first_name }} {{ client.contact_last_name }}
                   </div>
                   <div class="text-xs opacity-50">
-                    {{ client.contact_email }}
+                    <div v-if="client.contact_email">{{ client.contact_email }}</div>
+                    <div v-if="client.contact_phone">{{ client.contact_phone }}</div>
                   </div>
                 </div>
                 <span v-else class="text-xs opacity-50">No contact</span>
@@ -307,17 +381,18 @@ const dynamicTitle = computed(() => {
               <!-- Therapy Info (Desktop only) -->
               <td class="hidden lg:table-cell">
                 <div v-if="client.therapy_title">
-                  {{ client.therapy_title }}
-                  <br />
-                  <span v-if="client.provider_approval_code" class="badge badge-ghost badge-sm">
-                    {{ client.provider_approval_code }}
-                  </span>
+                  <div class="font-medium text-sm">{{ client.therapy_title }}</div>
+                  <div class="text-xs opacity-50">
+                    <div v-if="client.cost_provider">{{ client.cost_provider.department }}, {{ client.cost_provider.organization }}</div>
+                    <div v-if="client.provider_approval_code">Approval: {{ client.provider_approval_code }} from {{ localeDatesString(client.provider_approval_date) }}</div>
+                    <div v-if="client.invoiced_individually">Individual invoicing</div>
+                  </div>
                 </div>
                 <span v-else class="text-xs opacity-50">Not assigned</span>
               </td>
               
               <!-- Status -->
-              <td>
+              <td class="hidden lg:table-cell">
                 <span 
                   class="badge badge-sm capitalize"
                   :class="getStatusBadge(client.status)"
@@ -325,33 +400,13 @@ const dynamicTitle = computed(() => {
                   {{ client.status }}
                 </span>
               </td>
-              
-              <!-- Actions -->
-              <th>
-                <div class="flex gap-1" @click.stop>
-                  <button 
-                    class="btn btn-ghost btn-xs"
-                    @click="handleClientEdit(client)"
-                    title="Edit Client"
-                  >
-                    Edit
-                  </button>
-                  <button 
-                    class="btn btn-ghost btn-xs text-error"
-                    @click="handleClientDelete(client)"
-                    title="Delete Client"
-                  >
-                    Del
-                  </button>
-                </div>
-              </th>
             </tr>
           </tbody>
           
           <!-- Empty State -->
           <tbody v-if="filteredClients.length === 0">
             <tr>
-              <td colspan="6" class="text-center py-8">
+              <td colspan="4" class="text-center py-8">
                 <div class="flex flex-col items-center gap-2 text-base-content/50">
                   <Users class="w-12 h-12" />
                   <div>
@@ -373,25 +428,8 @@ const dynamicTitle = computed(() => {
     </template>
 
     <template #footer>
-      <div class="flex items-center gap-4">
-        <span>{{ filteredClients.length }} of {{ props.clients.length }} clients</span>
-        <span v-if="selectedClients.size > 0" class="text-primary font-medium">
-          {{ selectedClients.size }} selected
-        </span>
-      </div>
-      
-      <!-- Bulk Actions (when clients are selected) -->
-      <div v-if="selectedClients.size > 0" class="flex gap-2">
-        <button class="btn btn-sm btn-outline" @click="selectedClients.clear()">
-          Clear Selection
-        </button>
-        <button class="btn btn-sm btn-error btn-outline" @click="handleBulkDelete">
-          Delete Selected
-        </button>
-      </div>
-      
       <!-- Summary Stats -->
-      <div v-else class="flex gap-4 text-xs">
+      <div class="flex gap-4 text-xs">
         <span class="badge badge-success badge-outline">
           {{ clientCounts.active }} Active
         </span>

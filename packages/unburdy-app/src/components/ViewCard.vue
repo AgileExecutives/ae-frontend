@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="card-header p-2 lg:p-4 border-b border-base-200 flex-shrink-0">
       <div class="flex justify-between items-center">
-        <div class="flex-1 min-w-0">
+        <div v-if="title && title.length>0" class="flex-1 min-w-0">
           <h2 class="card-title text-sm lg:text-base"> {{ title }} </h2>
         </div>
         <div class="flex gap-1 lg:gap-2">

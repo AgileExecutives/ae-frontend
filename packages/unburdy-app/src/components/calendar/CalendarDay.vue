@@ -250,11 +250,14 @@ const dayTitle = computed(() => {
             <div
               v-for="(slot, index) in hourSlots"
               :key="`time-${slot.time}`"
-              class="absolute right-2 text-xs text-base-content/70 select-none"
-              :class="index === 0 ? '' : '-translate-y-1/2'"
+              class="absolute text-xs text-base-content/70 select-none"
+              :class="[
+                index === 0 ? '' : '-translate-y-1/2',
+                isMobile ? 'right-1' : 'right-2'
+              ]"
               :style="{ top: `${slot.slotIndex * 12 * props.slotHeight + (index === 0 ? 8 : 0)}px` }"
             >
-              {{ slot.time }}
+             {{ slot.time }}
             </div>
           </div>
 
@@ -314,7 +317,7 @@ const dayTitle = computed(() => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
     </template>
 
     <template #footer>
