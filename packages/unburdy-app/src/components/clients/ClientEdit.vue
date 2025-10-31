@@ -184,18 +184,7 @@
                 <label class="label">
                   <span :class="formClasses.label">Diagnosis</span>
                 </label>
-                <select v-model="formData.therapy_title" :class="formClasses.select">
-                  <optgroup v-for="key in Object.keys(groupedDiagnosticStandards)" :key="key" :label="key">
-                    <option 
-                      v-for="standard in groupedDiagnosticStandards[key]" 
-                      :key="standard.icd10" 
-                      :value="standard.title"
-                      :title="standard.description"
-                    >
-                      {{ standard.abbreviation }} - {{ standard.title }}
-                    </option>
-                  </optgroup>
-                </select>
+                <GroupedSeachSelect v-model="formData.therapy_title" :options="diagnosticStds" />
               </div>
               <div class="form-control col-span-2">
                 <label class="label cursor-pointer">
@@ -262,6 +251,7 @@ import type { Client, CostProvider } from '@agile-exec/api-client'
 import { getApiClient } from '@/config/api-config'
 import { appConfig, MOCK_COST_PROVIDER_DATA, MOCK_DIAGNOSTIC_STANDARDS_DATA } from '@/config/app-config'
 import { useI18n } from 'vue-i18n'
+import GroupedSeachSelect from '../GroupedSeachSelect.vue'
 
 // Type definition for DiagnosticStandard
 interface DiagnosticStandard {
@@ -463,6 +453,16 @@ function groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {
 // Group diagnostic standards by category for organized dropdown
 const groupedDiagnosticStandards = computed(() => {
   return groupBy<DiagnosticStandard>(diagnosticStandards.value, 'category')
+})
+
+const diagnosticStds = computed(() => {
+  return diagnosticStandards.value.map(std => {
+    return {
+      label: std.abbreviation + ' - ' + std.title,
+      value: std.abbreviation + ' - ' + std.title,
+      category: std.category
+    }
+  })
 })
 
 // Expose form validation and submission methods

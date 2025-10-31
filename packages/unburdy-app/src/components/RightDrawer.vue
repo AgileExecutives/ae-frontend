@@ -13,17 +13,19 @@
       <div class="drawer-side z-[70]">
         <label :for="drawerId" aria-label="close sidebar" class="drawer-overlay lg:hidden"></label>
         <label :for="drawerId" aria-label="close sidebar" class="drawer-overlay hidden lg:block" v-if="!isPinned"></label>
-        <div class="bg-base-200 backdrop-blur flex flex-col drawer-sidebar w-full" 
+        <div class="bg-base-200 backdrop-blur flex flex-col drawer-sidebar" 
              :class="{ 
                'shadow-xl': !isPinned, 
                'border-l border-base-300': isPinned,
                'lg:fixed lg:right-0 lg:top-0': isPinned && isOpen,
                'h-full': !isPinned,
-               'h-screen': isPinned && isOpen
+               'h-screen': isPinned && isOpen,
+               'w-full': isMobile,
+               'lg:w-[max(35%,350px)]': !isMobile
              }"
-             style="min-width: 350px;"
              :style="{ 
-               width: isMobile ? '100%' : 'max(35%, 350px)'
+               minWidth: isMobile ? '100%' : '350px',
+               width: isMobile ? '100vw' : 'max(35%, 350px)'
              }">
         
         <!-- Drawer Header (Fixed) -->
@@ -74,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 
 interface Props {
   title: string
@@ -100,10 +102,28 @@ const emit = defineEmits<{
 // Generate unique drawer ID
 const drawerId = computed(() => `${props.id}-toggle`)
 
-// Mobile breakpoint detection
+// Mobile breakpoint detection with reactive window width
+const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024)
+
+const updateWindowWidth = () => {
+  windowWidth.value = window.innerWidth
+}
+
+onMounted(() => {
+  if (typeof window !== 'undefined') {
+    window.addEventListener('resize', updateWindowWidth)
+    updateWindowWidth() // Initial call
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('resize', updateWindowWidth)
+  }
+})
+
 const isMobile = computed(() => {
-  if (typeof window === 'undefined') return false
-  return window.innerWidth < 1024
+  return windowWidth.value < 1024
 })
 
 // Internal state that syncs with v-model
