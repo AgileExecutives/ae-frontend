@@ -246,71 +246,71 @@ export const MOCK_CLIENT_DATA = {
 export const MOCK_DIAGNOSTIC_STANDARDS_DATA = {
   "diagnostic_standards": [
     {
-      "id": 1,
-      "code": "F70.1",
+      "icd10": 701,
+      "abbreviation": "F70.1",
       "title": "Leichte Intelligenzminderung",
       "category": "Intelligenzminderung",
       "description": "IQ zwischen 50-69"
     },
     {
-      "id": 2,
-      "code": "F81.1",
+      "icd10": 811,
+      "abbreviation": "F81.1",
       "title": "Isolierte Rechtschreibstörung", 
       "category": "Entwicklungsstörungen schulischer Fertigkeiten",
       "description": "Spezifische Rechtschreibstörung"
     },
     {
-      "id": 3,
-      "code": "F43.2",
+      "icd10": 432,
+      "abbreviation": "F43.2",
       "title": "Anpassungsstörung",
       "category": "Reaktionen auf schwere Belastungen",
       "description": "Anpassungsstörungen"
     },
     {
-      "id": 4,
-      "code": "F90.0",
+      "icd10": 900,
+      "abbreviation": "F90.0",
       "title": "Einfache Aktivitäts- und Aufmerksamkeitsstörung",
       "category": "ADHS",
       "description": "Aufmerksamkeitsdefizit-/Hyperaktivitätsstörung"
     },
     {
-      "id": 5,
-      "code": "F81.0",
+      "icd10": 810,
+      "abbreviation": "F81.0",
       "title": "Lese- und Rechtschreibstörung",
       "category": "Entwicklungsstörungen schulischer Fertigkeiten", 
       "description": "Kombinierte Störung des Schriftspracherwerbs"
     },
     {
-      "id": 6,
-      "code": "F84.0",
+      "icd10": 840,
+      "abbreviation": "F84.0",
       "title": "Frühkindlicher Autismus",
       "category": "Tiefgreifende Entwicklungsstörungen",
       "description": "Autistische Störung"
     },
     {
-      "id": 7,
-      "code": "F41.9",
+      "icd10": 419,
+      "abbreviation": "F41.9",
       "title": "Angststörung, nicht näher bezeichnet",
       "category": "Angststörungen",
       "description": "Nicht spezifizierte Angststörung"
     },
     {
-      "id": 8,
-      "code": "F32.1",
+      "icd10": 321,
+      "abbreviation": "F32.1",
       "title": "Mittelgradige depressive Episode",
       "category": "Affektive Störungen",
       "description": "Depression mittleren Schweregrades"
     },
     {
-      "id": 9,
-      "code": "F80.1",
+      "icd10": 801,
+      "abbreviation": "F80.1",
       "title": "Expressive Sprachstörung",
       "category": "Entwicklungsstörungen des Sprechens und der Sprache",
       "description": "Störung der Sprachproduktion"
     },
     {
-      "id": 10,
-      "code": "F93.0",
+      "icd10": 930,
+      "abbreviation": "F93.0",
       "title": "Emotionale Störung mit Trennungsangst des Kindesalters",
       "category": "Emotionale Störungen des Kindesalters",
       "description": "Trennungsangst bei Kindern"

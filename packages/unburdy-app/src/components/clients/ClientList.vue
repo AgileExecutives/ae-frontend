@@ -384,11 +384,12 @@ const currentStatusLabel = computed(() => {
               <td class="hidden lg:table-cell">
                 <div v-if="client.therapy_title">
                   <div class="font-medium text-sm pb-1">{{ client.therapy_title }}</div>
-                  <div class="text-xs opacity-50">
+                  <div  class="text-xs opacity-50">
+                    <div v-if="client.cost_provider?.organization && client.cost_provider?.department">{{ client.cost_provider.organization }} - {{ client.cost_provider.department }}</div>
                     <div v-if="client.provider_approval_code">Approval: {{ client.provider_approval_code }}</div>
-                    <div v-if="client.invoiced_individually">Individual invoicing</div>
                   </div>
                 </div>
+                <span class="text-xs opacity-50" v-else-if="client.invoiced_individually">Individual invoicing</span>
                 <span v-else class="text-xs opacity-50">Not assigned</span>
               </td>
               

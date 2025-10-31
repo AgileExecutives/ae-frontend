@@ -110,14 +110,18 @@
           <span class="font-medium">Individually paid</span>
         </div>
 
-      <div v-if="client.provider_approval_code"class="grid grid-cols-2 gap-x-4 gap-y-2">
+      <div v-else-if="client.provider_approval_code"class="grid grid-cols-2 gap-x-4 gap-y-2">
+          <div v-if="client.cost_provider" class="flex col-span-2 gap-2">
+            <span class="text-sm">{{ client.cost_provider.department }}</span>
+            <span class="text-sm">{{ client.cost_provider.organization }}</span>
+          </div>
         <div  class="flex gap-2">
           <span class="text-sm opacity-70">Approval:</span>
           <span class="text-sm">{{ client.provider_approval_code }}</span>
         </div>
-        <div v-if="client.provider_approval_code && client.approval_date" class="flex gap-2 justify-end">
+        <div v-if="client.provider_approval_date" class="flex gap-2 justify-end">
           <span class="text-sm opacity-70">Approval Date:</span>
-          <span class="text-sm">{{ formatDate(client.approval_date) }}</span>
+          <span class="text-sm">{{ formatDate(client.provider_approval_date) }}</span>
         </div>
       </div>
               <div v-else class="text-sm col-span-2 opacity-50">

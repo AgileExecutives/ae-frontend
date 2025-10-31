@@ -184,7 +184,10 @@
                 <label class="label">
                   <span :class="formClasses.label">Diagnosis</span>
                 </label>
-                <GroupedSeachSelect v-model="formData.therapy_title" :options="diagnosticStds" />
+                <GroupedSeachSelect 
+                  v-model="formData.therapy_title" 
+                  :options="diagnosticStds || []"
+                />
               </div>
               <div class="form-control col-span-2">
                 <label class="label cursor-pointer">
@@ -196,10 +199,11 @@
                 <label class="label">
                   <span :class="formClasses.label">Cost Provider</span>
                 </label>
+
                 <select v-model="formData.cost_provider_id" :class="formClasses.select"
                   :disabled="formData.invoiced_individually">
                   <option value="">Select Cost Provider...</option>
-                  <option v-for="provider in costProviders" :key="provider.id" :value="provider.id">
+                  <option v-for="provider in costProviders" :key="provider.id" :value="Number(provider.id)">
                     {{ provider.organization }} - {{ provider.department }}
                   </option>
                 </select>
@@ -212,9 +216,9 @@
               </div>
                 <div class="form-control" v-show="!formData.invoiced_individually">
                   <label class="label">
-                    <span :class="formClasses.label">Provider Approval Code</span>
+                    <span :class="formClasses.label">Provider Approval Date</span>
                   </label>
-                  <input v-model="formData.provider_approval_code" type="text" :class="formClasses.input" />
+                  <input v-model="formData.provider_approval_date" type="date" :class="formClasses.input" />
                 </div>
             </div>
 
@@ -324,12 +328,13 @@ const loadCostProviders = async () => {
       // Use mock data
       costProviders.value = MOCK_COST_PROVIDER_DATA.cost_providers as CostProvider[]
     } else {
-      // Use real API
-      const response = await apiClient.getCostProviders({ limit: 100 })
+      // Use real API - fetch from getCostProviders endpoint
+      const response = await apiClient.getCostProviders()
       if (response.success && response.data) {
         costProviders.value = response.data
       }
     }
+
   } catch (error) {
     console.error('Failed to load cost providers:', error)
     // Fallback to mock data on error
@@ -347,10 +352,12 @@ const loadDiagnosticStandards = async () => {
       // Use mock data
       diagnosticStandards.value = MOCK_DIAGNOSTIC_STANDARDS_DATA.diagnostic_standards as DiagnosticStandard[]
     } else {
-      // Use real API
-      const response = await apiClient.getDiagnosticStandards()
+      // Use real API - fetch static JSON data
+      const response = await apiClient.getStatic('diagnostic_std')
       if (response.success && response.data) {
-        diagnosticStandards.value = (locale.value === 'en' ? response.data.en : response.data.de)
+        // Handle both direct array and nested object structures
+        const data = response.data.diagnostic_standards || response.data
+        diagnosticStandards.value = (locale.value === 'en') ? data.en : data.de
       }
     }
   } catch (error) {
@@ -368,6 +375,21 @@ onMounted(() => {
   loadDiagnosticStandards()
 })
 
+// Watch for cost providers loading
+watch(
+  () => costProviders.value,
+  (newProviders) => {
+    if (newProviders && newProviders.length > 0 && formData.cost_provider_id) {
+      // Check if the stored cost provider ID exists in the loaded providers
+      const existingProvider = newProviders.find(p => Number(p.id) === formData.cost_provider_id)
+      if (!existingProvider) {
+        // Reset to empty if the stored ID doesn't exist
+        formData.cost_provider_id = undefined
+      }
+    }
+  }
+)
+
 // Initialize form data when client changes
 watch(
   () => props.client,
@@ -381,14 +403,40 @@ watch(
           if (key.includes('date') && newClient[clientKey]) {
             const dateValue = newClient[clientKey] as string
             // Convert ISO date to YYYY-MM-DD format for input[type="date"]
+            let formattedDate: string
+            if (dateValue.includes('T')) {
+              // ISO format: "2025-10-01T00:00:00Z" → "2025-10-01"
+              formattedDate = dateValue.split('T')[0] || dateValue
+            } else {
+              // Already in YYYY-MM-DD format
+              formattedDate = dateValue
+            }
+            console.log(`📅 Date field ${key}: "${dateValue}" → "${formattedDate}"`)
             // @ts-ignore - Dynamic key assignment
-            formData[clientKey] = dateValue.split('T')[0]
+            formData[clientKey] = formattedDate
           } else {
             // @ts-ignore - Dynamic key assignment
             formData[clientKey] = newClient[clientKey]
           }
         }
       })
+      console.log('ClientEdit watch - newClient:', newClient)
+      formData.therapy_title = newClient.therapy_title || ''
+      
+      // Handle cost provider ID - could come from cost_provider_id directly or from cost_provider.id
+      const costProviderId = newClient.cost_provider_id || newClient.cost_provider?.id
+      formData.cost_provider_id = costProviderId ? Number(costProviderId) : undefined
+      
+      // Explicitly handle provider_approval_date in case it's not processed in the main loop
+      if (newClient.provider_approval_date) {
+        const dateValue = newClient.provider_approval_date as string
+        if (dateValue.includes('T')) {
+          formData.provider_approval_date = dateValue.split('T')[0] || dateValue
+        } else {
+          formData.provider_approval_date = dateValue
+        }
+        console.log(`📅 Explicit provider_approval_date: "${dateValue}" → "${formData.provider_approval_date}"`)
+      }
     }
   },
   { immediate: true }
@@ -411,6 +459,10 @@ const handleSubmit = () => {
   // Convert date fields back to ISO format if needed
   if (clientData.date_of_birth) {
     clientData.date_of_birth = new Date(clientData.date_of_birth).toISOString()
+  }
+  
+  if (clientData.provider_approval_date) {
+    clientData.provider_approval_date = new Date(clientData.provider_approval_date).toISOString()
   }
 
   console.log('ClientEdit handleSubmit - clientData:', clientData)
@@ -464,6 +516,8 @@ const diagnosticStds = computed(() => {
     }
   })
 })
+
+
 
 // Expose form validation and submission methods
 defineExpose({
