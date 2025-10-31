@@ -2,7 +2,7 @@
   <DrawerLayout>
     <RightDrawer
       v-model="isDrawerOpen"
-      :title="selectedClient ? `${selectedClient.first_name} ${selectedClient.last_name}` : 'Client Details'"
+      :title="drawerTitle"
       id="client-details-drawer"
       v-model:pinned="drawerPinned"
       @close="closeClientDetails"
@@ -47,10 +47,13 @@
       </template>
 
       <template #form>
-        <div v-if="(selectedClient || isEditMode) && isDrawerOpen">
+        <div v-if="(selectedClient || isEditMode) && isDrawerOpen" class="h-full flex flex-col">
           <ClientDetail 
             v-if="!isEditMode"
-            :client="selectedClient" 
+            :client="selectedClient"
+            @edit="editClient"
+            @delete="client => showDeleteModal(client)"
+            @cancel="closeClientDetails"
           />
           <ClientEdit 
             v-else
@@ -59,39 +62,6 @@
             @cancel="cancelEdit"
             @name-change="handleNameChange"
           />
-        </div>
-      </template>
-
-      <template #actions>
-        <div v-if="(selectedClient || isEditMode) && isDrawerOpen" class="flex gap-2">
-          <template v-if="isEditMode">
-            <button
-              class="btn btn-primary btn-sm flex-1"
-              @click="submitEdit"
-            >
-              Save
-            </button>
-          </template>
-          <template v-else>
-            <button 
-              class="btn btn-error btn-outline btn-sm"
-              @click="selectedClient && showDeleteModal(selectedClient)"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Delete
-            </button>
-            <button 
-              class="btn btn-primary btn-sm ml-auto"
-              @click="editClient"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-              Edit
-            </button>
-          </template>
         </div>
       </template>
     </RightDrawer>
@@ -186,6 +156,22 @@ const error = ref<string | null>(null)
 const showDeleteConfirmModal = ref(false)
 const clientToDelete = ref<Client | null>(null)
 
+// Computed drawer title that updates based on selected client and edit mode
+const drawerTitle = computed(() => {
+  if (!selectedClient.value) {
+    return isEditMode.value ? 'New Client' : 'Client Details'
+  }
+  
+  const firstName = selectedClient.value.first_name || ''
+  const lastName = selectedClient.value.last_name || ''
+  
+  if (!firstName && !lastName) {
+    return isEditMode.value ? 'New Client' : 'Client Details'
+  }
+  
+  return `${firstName} ${lastName}`.trim()
+})
+
 // Load clients when component mounts
 onMounted(async () => {
   await fetchClients()
@@ -254,29 +240,59 @@ const deleteClientApi = async (id: number) => {
   }
 }
 
-const submitEdit = () => {
-
-}
-// Helper functions are now in ClientDetail and ClientEdit components
-
-
-
-const saveClient = async (updatedClient: Client) => {
-  if (!selectedClient.value) return
-  
+const saveClient = async (clientData?: Partial<Client>) => {
+  // Use the form data passed from ClientEdit, or fall back to selectedClient
+  const dataToSave = clientData || selectedClient.value
+  if (!dataToSave) return
+  console.log('saveClient', dataToSave)
   try {
+    const id = (dataToSave.hasOwnProperty('id') && dataToSave.id ? dataToSave.id : 0)
     if (appConfig.MOCK_API) {
       // In mock mode, just update the client in the list
-      const index = clients.value.findIndex((c: Client) => c.id === updatedClient.id)
-      if (index !== -1) {
-        clients.value[index] = updatedClient
-        selectedClient.value = updatedClient
+      if (id === 0) {
+        // Creating new client - add to the list with a temporary ID
+        const newClient = { ...dataToSave, id: Date.now() } as Client
+        clients.value.unshift(newClient)
+        selectedClient.value = newClient
+      } else {
+        // Updating existing client
+        const index = clients.value.findIndex((c: Client) => c.id === id)
+        if (index !== -1) {
+          clients.value[index] = { ...clients.value[index], ...dataToSave } as Client
+          selectedClient.value = clients.value[index]
+        }
       }
     } else {
-      // TODO: Implement API update when backend is ready
-      // const response = await apiClient.updateClient(updatedClient.id, updatedClient)
-      // selectedClient.value = response.data
-      console.log('API update not implemented yet')
+      // Use real API to update client status
+      var response
+      if (id === 0) {
+        response = await apiClient.createClient({
+          ...dataToSave
+        })
+      } else {
+        response = await apiClient.updateClient(id, {
+          ...dataToSave
+        })
+      }
+      if (response.success && response.data) {
+        if (id === 0) {
+          // Creating new client - add to the list
+          clients.value.unshift(response.data)
+          selectedClient.value = response.data
+        } else {
+          // Update existing client in the list
+          const index = clients.value.findIndex((c: Client) => c.id === id)
+          if (index !== -1) {
+            clients.value[index] = response.data
+            // Update selected client if it's the same one
+            if (selectedClient.value?.id === response.data.id) {
+              selectedClient.value = response.data
+            }
+          }
+        }
+      } else {
+        throw new Error(response.error || 'Failed to save client')
+      }
     }
     isEditMode.value = false
   } catch (error) {
@@ -375,7 +391,7 @@ const handleAddClient = () => {
 
 const handleClientEdit = (client: Client) => {
   console.log('Edit client:', client)
-  selectedClient.value = client
+  selectedClient.value = { ...client }
   isDrawerOpen.value = true
   isEditMode.value = true
 }
@@ -400,6 +416,13 @@ const handleNameChange = (firstName: string, lastName: string) => {
       first_name: firstName,
       last_name: lastName
     }
+  } else if (isEditMode.value) {
+    // If we're creating a new client, create a temporary client object for the title
+    selectedClient.value = {
+      first_name: firstName,
+      last_name: lastName,
+      status: 'active'
+    } as Client
   }
 }
 
@@ -408,7 +431,13 @@ const editClient = () => {
 }
 
 const cancelEdit = () => {
-  isEditMode.value = false
+  // If we were creating a new client (no selectedClient or selectedClient has no id), close the drawer completely
+  if (!selectedClient.value || !selectedClient.value.id) {
+    closeClientDetails()
+  } else {
+    // If we were editing an existing client, just exit edit mode
+    isEditMode.value = false
+  }
 }
 
 // Modal functions

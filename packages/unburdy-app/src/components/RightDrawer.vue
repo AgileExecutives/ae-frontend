@@ -13,16 +13,17 @@
       <div class="drawer-side z-[70]">
         <label :for="drawerId" aria-label="close sidebar" class="drawer-overlay lg:hidden"></label>
         <label :for="drawerId" aria-label="close sidebar" class="drawer-overlay hidden lg:block" v-if="!isPinned"></label>
-        <div class="h-full bg-base-200 backdrop-blur flex flex-col drawer-sidebar w-full" 
+        <div class="bg-base-200 backdrop-blur flex flex-col drawer-sidebar w-full" 
              :class="{ 
                'shadow-xl': !isPinned, 
                'border-l border-base-300': isPinned,
-               'lg:fixed lg:right-0 lg:top-0': isPinned && isOpen
+               'lg:fixed lg:right-0 lg:top-0': isPinned && isOpen,
+               'h-full': !isPinned,
+               'h-screen': isPinned && isOpen
              }"
              style="min-width: 350px;"
              :style="{ 
-               width: isMobile ? '100%' : 'max(35%, 350px)',
-               height: isPinned && isOpen ? '100vh' : undefined
+               width: isMobile ? '100%' : 'max(35%, 350px)'
              }">
         
         <!-- Drawer Header (Fixed) -->
@@ -61,22 +62,13 @@
           </div>
         </div>
         
-        <!-- Drawer Content (Scrollable) -->
-        <div class="flex-1 overflow-hidden">
-          <div class="h-full p-4 overflow-y-auto">
-            <slot name="form" />
-          </div>
+        <!-- Drawer Content (Full height for proper layout) -->
+        <div class="flex-1 flex flex-col min-h-0">
+          <slot name="form" />
         </div>
-        
-        <!-- Drawer Footer (Fixed) -->
-        <div class="flex-shrink-0 p-4 border-t border-base-300 bg-base-100">
-          <div class="flex gap-2">
-            <button class="btn btn-neutral btn-outline btn-sm flex-1" @click="close">Cancel</button>
-            <slot name="actions" />
-          </div>
         </div>
+
       </div>
-    </div>
     </div>
   </div>
 </template>
@@ -162,7 +154,7 @@ defineExpose({
 
 /* Ensure proper height and scrolling behavior */
 .drawer-sidebar {
-  height: 100vh;
+  min-height: 100vh;
   max-height: 100vh;
 }
 
