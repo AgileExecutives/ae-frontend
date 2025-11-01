@@ -51,59 +51,59 @@
               <CalendarDay
                 v-if="showDayView"
                 :date="currentDate"
-                :meetings="currentDayMeetings"
+                :meetings="calendar.getDayEvents()"
                 :start-hour="7"
                 :end-hour="21"
                 :slot-height="6"
                 :show-current-time="true"
                 @meeting-click="handleMeetingClick"
                 @time-slot-click="handleTimeSlotClick"
-                @previous-day="previousDay"
-                @next-day="nextDay"
-                @go-to-today="goToToday"
+                @previous-day="() => { const d = new Date(calendar.currentDate.value); d.setDate(d.getDate() - 1); calendar.goToDate(d) }"
+                @next-day="() => { const d = new Date(calendar.currentDate.value); d.setDate(d.getDate() + 1); calendar.goToDate(d) }"
+                @go-to-today="calendar.goToToday"
               />
 
               <!-- Week View -->
               <CalendarWeek
                 v-if="showWeekView"
                 :date="currentDate"
-                :meetings="currentWeekMeetings"
+                :meetings="calendar.currentWeekEvents.value"
                 :start-hour="7"
                 :end-hour="21"
                 :slot-height="6"
                 :show-current-time="true"
-                :is-loading="isLoadingEvents"
-                :error="eventError"
+                :is-loading="calendar.isLoading.value"
+                :error="calendar.error.value"
                 @meeting-click="handleMeetingClick"
                 @time-slot-click="handleTimeSlotClick"
-                @previous-week="previousWeek"
-                @next-week="nextWeek"
-                @go-to-today="goToToday"
-                @retry-load="retryLoadEvents"
+                @previous-week="calendar.prevWeek"
+                @next-week="calendar.nextWeek"
+                @go-to-today="calendar.goToToday"
+                @retry-load="calendar.loadWeekEvents"
               />
               
               <!-- Month View -->
               <CalendarMonth
                 v-if="showMonthView"
                 :date="currentDate"
-                :meetings="currentMonthMeetings"
+                :meetings="calendar.getMonthEvents()"
                 @meeting-click="handleMeetingClick"
                 @date-click="handleDateClick"
-                @previous-month="previousMonth"
-                @next-month="nextMonth"
-                @go-to-today="goToToday"
+                @previous-month="calendar.prevMonth"
+                @next-month="calendar.nextMonth"
+                @go-to-today="calendar.goToToday"
               />
               
               <!-- Year View -->
               <CalendarYear
                 v-if="showYearView"
                 :date="currentDate"
-                :meetings="currentYearMeetings"
+                :meetings="calendar.getYearEvents()"
                 @meeting-click="handleMeetingClick"
                 @month-click="handleMonthClick"
-                @previous-year="previousYear"
-                @next-year="nextYear"
-                @go-to-today="goToToday"
+                @previous-year="calendar.prevYear"
+                @next-year="calendar.nextYear"
+                @go-to-today="calendar.goToToday"
               />
         </div>
         
@@ -304,10 +304,7 @@ const showWeekView = computed(() => currentCalendarView.value === CalendarViewTy
 const showMonthView = computed(() => currentCalendarView.value === CalendarViewType.Month)
 const showYearView = computed(() => currentCalendarView.value === CalendarViewType.Year)
 
-// Calendar data from composable
-const meetings = calendar.events
-const isLoadingEvents = calendar.isLoading
-const eventError = calendar.error
+// Use composable data directly - no need for local variables
 
 // Add meeting modal
 const showAddMeeting = ref(false)
@@ -324,67 +321,16 @@ const showMeetingDetails = ref(false)
 const drawerPinned = ref(false)
 const selectedMeeting = ref<Meeting | null>(null)
 
-// Computed properties for stats (using composable data)
-const todayMeetings = computed(() => {
-  return calendar.getDayEvents()
-})
+// Stats are computed on-demand from composable - no local caching needed
 
-const weekMeetings = computed(() => {
-  return calendar.getWeekEvents()
-})
-
-const upcomingMeetingsText = computed(() => {
-  const now = new Date()
-  const upcoming = todayMeetings.value.filter(meeting => {
-    const meetingTime = new Date(`${meeting.date} ${meeting.startTime}`)
-    return meetingTime > now
-  })
-  return `${upcoming.length} upcoming`
-})
-
-const todayHours = computed(() => {
-  return todayMeetings.value.reduce((total: number, meeting) => {
-    const [startHour, startMin] = meeting.startTime.split(':').map(Number)
-    const [endHour, endMin] = meeting.endTime.split(':').map(Number)
-    const safeStartHour = startHour ?? 0
-    const safeStartMin = startMin ?? 0
-    const safeEndHour = endHour ?? 0
-    const safeEndMin = endMin ?? 0
-    const duration = (safeEndHour * 60 + safeEndMin) - (safeStartHour * 60 + safeStartMin)
-    return total + (duration / 60)
-  }, 0).toFixed(1)
-})
-
-// Navigation functions (using composable)
-const previousWeek = () => calendar.prevWeek()
-const nextWeek = () => calendar.nextWeek()
-const previousMonth = () => calendar.prevMonth()
-const nextMonth = () => calendar.nextMonth()
-const previousYear = () => calendar.prevYear()
-const nextYear = () => calendar.nextYear()
-const goToToday = () => calendar.goToToday()
-
-const previousDay = () => {
-  const newDate = new Date(currentDate.value)
-  newDate.setDate(newDate.getDate() - 1)
-  calendar.goToDate(newDate)
-}
-
-const nextDay = () => {
-  const newDate = new Date(currentDate.value)
-  newDate.setDate(newDate.getDate() + 1)
-  calendar.goToDate(newDate)
-}
+// Use composable navigation directly - no wrapper functions needed
 
 // Handle view change from mobile navbar
 const handleViewChange = (view: 'week' | 'month' | 'year' | 'day') => {
   currentCalendarView.value = view as CalendarViewType
 }
 
-// Retry loading events
-const retryLoadEvents = async () => {
-  await calendar.loadWeekEvents()
-}
+// Use composable methods directly - no wrapper functions needed
 
 // View change helper functions
 const setWeekView = () => currentCalendarView.value = CalendarViewType.Week
@@ -392,11 +338,7 @@ const setMonthView = () => currentCalendarView.value = CalendarViewType.Month
 const setYearView = () => currentCalendarView.value = CalendarViewType.Year
 const setDayView = () => currentCalendarView.value = CalendarViewType.Day
 
-// Calendar meetings from composable - use reactive computed properties
-const currentDayMeetings = computed(() => calendar.getDayEvents(calendar.currentDate.value))
-const currentWeekMeetings = calendar.currentWeekEvents // This is already a reactive computed from the composable
-const currentMonthMeetings = computed(() => calendar.getMonthEvents(calendar.currentDate.value))
-const currentYearMeetings = computed(() => calendar.getYearEvents(calendar.currentDate.value))
+// Use composable data directly - no local computed needed
 
 // Meeting details functions
 const formatMeetingDate = (dateStr?: string) => {
@@ -516,7 +458,7 @@ onMounted(async () => {
   await calendar.loadWeekEvents()
   
   // Debug: Log current week meetings
-  console.log('📅 Calendar View - Current week meetings:', currentWeekMeetings.value)
+  console.log('📅 Calendar View - Current week meetings:', calendar.currentWeekEvents.value)
   console.log('📅 Calendar View - Calendar events:', calendar.events.value)
   console.log('📅 Calendar View - Current date:', calendar.currentDate.value)
 })

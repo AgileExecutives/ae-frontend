@@ -171,14 +171,8 @@ const processedMeetings = computed(() => {
       // For sample meetings without date, show on current day
       if (!meeting.date) return dayIndex === 0
       
-      // Handle different date formats
-      let meetingDateStr: string = meeting.date || ''
-      if (meetingDateStr.includes('T')) {
-        // Convert ISO format "2025-10-27T00:00:00Z" to "2025-10-27"
-        meetingDateStr = meetingDateStr.split('T')[0] || ''
-      }
-      
-      console.log('📅 CalendarWeek - Comparing:', meetingDateStr, 'with', day.dateStr)
+      // Convert ISO format to simple date for comparison
+      const meetingDateStr = (meeting.date || '').split('T')[0]
       return meetingDateStr === day.dateStr
     })
 
@@ -243,12 +237,8 @@ const processedMeetings = computed(() => {
   return allProcessed
 })
 
-// Use sample data if no meetings provided
-const displayMeetings = computed(() => {
-  console.log('📅 CalendarWeek - Props meetings:', props.meetings)
-  console.log('📅 CalendarWeek - Display meetings length:', props.meetings.length)
-  return props.meetings.length > 0 ? props.meetings : []
-})
+// Use props meetings directly
+const displayMeetings = computed(() => props.meetings)
 
 // Handle time slot click
 const handleTimeSlotClick = (time: string, dateStr?: string) => {
