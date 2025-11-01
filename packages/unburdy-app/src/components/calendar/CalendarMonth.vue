@@ -8,10 +8,14 @@ interface Meeting {
   title: string
   startTime: string // HH:MM format
   endTime: string   // HH:MM format
-  type: 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error'
+  classification: 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error' | 'school_holiday'
+  type?: string // Original backend type for holidays and other identification
   description?: string
   attendees?: string[]
-  date?: string // YYYY-MM-DD format, optional for sample meetings
+  date?: string // Start date - YYYY-MM-DD format
+  endDate?: string // End date - YYYY-MM-DD format (for multi-day events)
+  isAllDay?: boolean // All-day event flag
+  isMultiDay?: boolean // Flag to indicate if event spans multiple days
 }
 
 const props = withDefaults(defineProps<{
@@ -25,6 +29,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   meetingClick: [meeting: Meeting]
   dateClick: [date: string]
+  weekClick: [date: string]
   previousMonth: []
   nextMonth: []
   goToToday: []
@@ -144,9 +149,17 @@ const goToToday = () => {
   emit('goToToday')
 }
 
-// Handle date click
-const handleDateClick = (dateStr: string) => {
-  emit('dateClick', dateStr)
+// Handle date click - when clicking on day area (not on meeting), open week view
+const handleDateClick = (dateStr: string, dayMeetings: Meeting[]) => {
+  // Always open week view when clicking on day area (not on specific meetings)
+  emit('weekClick', dateStr)
+}
+
+// Handle week number click
+const handleWeekClick = (weekDays: any[]) => {
+  // Use the first day of the week as the reference date
+  const firstDay = weekDays[0]
+  emit('weekClick', firstDay.dateStr)
 }
 
 // Handle meeting click
@@ -157,6 +170,34 @@ const handleMeetingClick = (meeting: Meeting) => {
 // Day names
 const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
+// Meeting color mapping for Tailwind CSS classes - solid colors for visibility
+const getMeetingClasses = (classification: string, eventType?: string) => {
+  // Special handling for public holidays - always red
+  if (eventType === 'public_holiday' || eventType === 'holiday' || eventType === 'feiertag') {
+    console.log('🎄 Public holiday detected in month view, applying red styling:', eventType)
+    return 'bg-red-500 text-white border-red-600'
+  }
+  
+  // Ensure we have a valid classification, default to primary
+  const validClassification = classification || 'primary'
+  
+  // Using solid, explicit colors to ensure visibility
+  const colorMap = {
+    'primary': 'bg-blue-500 text-white border-blue-600',
+    'secondary': 'bg-purple-500 text-white border-purple-600',
+    'accent': 'bg-pink-500 text-white border-pink-600',
+    'info': 'bg-cyan-500 text-white border-cyan-600',
+    'success': 'bg-green-500 text-white border-green-600',
+    'warning': 'bg-yellow-500 text-black border-yellow-600',
+    'error': 'bg-red-500 text-white border-red-600',
+    'school_holiday': 'bg-orange-500/80 text-white border-orange-600'
+  }
+  
+  const classes = colorMap[validClassification as keyof typeof colorMap] || colorMap.primary
+  console.log('🎨 Month view meeting classes:', { classification: validClassification, eventType, classes })
+  return classes
+}
+
 // Month title for ViewCard
 const monthTitle = computed(() => {
   return props.date.toLocaleDateString('en-US', { 
@@ -164,6 +205,16 @@ const monthTitle = computed(() => {
     month: 'long' 
   })
 })
+
+// Helper function to get all-day events for a day
+const getAllDayEventsForDay = (dayMeetings: Meeting[]) => {
+  return dayMeetings.filter(m => m.isAllDay)
+}
+
+// Helper function to get regular timed events for a day
+const getTimedEventsForDay = (dayMeetings: Meeting[]) => {
+  return dayMeetings.filter(m => !m.isAllDay)
+}
 </script>
 
 <template>
@@ -207,7 +258,11 @@ const monthTitle = computed(() => {
         <div class="grid flex-1" :style="{ gridTemplateColumns: isMobile ? '25px repeat(7, 1fr)' : '35px repeat(7, 1fr)', gridTemplateRows: 'repeat(6, 1fr)' }">
           <template v-for="week in calendarWeeks" :key="`week-${week.weekNumber}`">
             <!-- Week number -->
-            <div class="border-r border-b border-base-200 bg-base-50/50 p-1 text-center text-xs font-medium text-base-content/50 flex items-center justify-center">
+            <div 
+              class="border-r border-b border-base-200 bg-base-50/50 p-1 text-center text-xs font-medium text-base-content/50 flex items-center justify-center cursor-pointer hover:bg-base-100 transition-colors"
+              @click="handleWeekClick(week.days)"
+              title="Open week view"
+            >
               {{ week.weekNumber }}
             </div>
             
@@ -215,14 +270,14 @@ const monthTitle = computed(() => {
             <div
               v-for="day in week.days"
               :key="day.dateStr"
-              class="border-r border-b border-base-200 last:border-r-0 p-1 lg:p-2 cursor-pointer hover:bg-base-50 transition-colors flex flex-col"
+              class="border-r border-b border-base-200 last:border-r-0 p-1 lg:p-2 cursor-pointer hover:bg-base-50 transition-colors flex flex-col min-w-0 overflow-hidden"
               :class="{
                 'bg-base-50': !day.isCurrentMonth,
                 'bg-primary/10': day.isToday,
                 'text-base-content/50': !day.isCurrentMonth,
                 'text-base-content': day.isCurrentMonth
               }"
-              @click="handleDateClick(day.dateStr!)"
+              @click="handleDateClick(day.dateStr!, day.meetings)"
             >
               <!-- Date number -->
               <div
@@ -235,25 +290,39 @@ const monthTitle = computed(() => {
                 {{ day.dayNumber }}
               </div>
               
-              <!-- Meetings -->
-              <div class="space-y-1">
+              <!-- All-day events at top -->
+              <div class="space-y-1 mb-1" v-if="getAllDayEventsForDay(day.meetings).length > 0">
                 <div
-                  v-for="meeting in day.meetings.slice(0, 4)"
+                  v-for="meeting in getAllDayEventsForDay(day.meetings).slice(0, 2)"
                   :key="meeting.id"
-                  class="text-xs truncate cursor-pointer transition-all duration-200 hover:shadow-md rounded px-1 py-0.5"
-                  :class="`bg-${meeting.type} text-${meeting.type}-content border border-${meeting.type}`"
+                  class="text-xs truncate cursor-pointer transition-all duration-200 hover:shadow-md rounded px-1 py-0.5 min-w-0 text-center"
+                  :class="getMeetingClasses(meeting.classification, meeting.type)"
+                  @click.stop="handleMeetingClick(meeting)"
+                  :title="meeting.title"
+                >
+                  <span class="truncate block font-medium">{{ meeting.title }}</span>
+                </div>
+              </div>
+              
+              <!-- Regular timed events -->
+              <div class="space-y-1 flex-1 min-h-0 overflow-hidden">
+                <div
+                  v-for="meeting in getTimedEventsForDay(day.meetings).slice(0, 3)"
+                  :key="meeting.id"
+                  class="text-xs truncate cursor-pointer transition-all duration-200 hover:shadow-md rounded px-1 py-0.5 min-w-0"
+                  :class="getMeetingClasses(meeting.classification, meeting.type)"
                   @click.stop="handleMeetingClick(meeting)"
                   :title="`${meeting.startTime} - ${meeting.title}`"
                 >
-                  {{ meeting.startTime }} {{ meeting.title }}
+                  <span class="truncate block">{{ meeting.startTime }} {{ meeting.title }}</span>
                 </div>
                 
                 <!-- Show more indicator -->
                 <div
-                  v-if="day.meetings.length > 4"
+                  v-if="getTimedEventsForDay(day.meetings).length > 3 || getAllDayEventsForDay(day.meetings).length > 2"
                   class="text-xs text-base-content/60 font-medium"
                 >
-                  +{{ day.meetings.length - 4 }} more
+                  +{{ (getTimedEventsForDay(day.meetings).length > 3 ? getTimedEventsForDay(day.meetings).length - 3 : 0) + (getAllDayEventsForDay(day.meetings).length > 2 ? getAllDayEventsForDay(day.meetings).length - 2 : 0) }} more
                 </div>
               </div>
             </div>
@@ -275,13 +344,27 @@ const monthTitle = computed(() => {
 </template>
 
 <style scoped>
-/* Ensure consistent grid layout */
-.grid-cols-8 > * {
+/* Ensure consistent grid layout - fixed dimensions */
+.grid > * {
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Prevent text content from resizing grid cells */
+.grid {
+  table-layout: fixed;
 }
 
 /* Meeting hover effects */
 .space-y-1 > div:hover {
   z-index: 10;
+}
+
+/* Force text truncation */
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

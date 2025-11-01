@@ -193,9 +193,24 @@ const fetchClients = async () => {
     }
 
     // Use real API
+    console.log('🚀 ClientsView - Calling apiClient.getClients...')
     const response = await apiClient.getClients({ page: 1, limit: 500 })
+    console.log('📦 ClientsView - Response received:', response)
+    console.log('📦 ClientsView - Response.success:', response.success)
+    console.log('📦 ClientsView - Response.data:', response.data)
+    console.log('📦 ClientsView - Response.data is array:', Array.isArray(response.data))
+    
     if (response.success && response.data) {
-      clients.value = Array.isArray(response.data) ? response.data : [response.data]
+      if (Array.isArray(response.data)) {
+        console.log('✅ ClientsView - Clients array received:', response.data.length, 'clients')
+        clients.value = response.data
+      } else if (response.data.clients && Array.isArray(response.data.clients)) {
+        console.log('✅ ClientsView - Clients nested array received:', response.data.clients.length, 'clients')
+        clients.value = response.data.clients
+      } else {
+        console.error('❌ ClientsView - Unexpected response structure:', response.data)
+        throw new Error('Invalid response format: expected clients array')
+      }
     } else {
       throw new Error(response.error || 'Failed to fetch clients')
     }

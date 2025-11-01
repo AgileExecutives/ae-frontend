@@ -329,9 +329,23 @@ const loadCostProviders = async () => {
       costProviders.value = MOCK_COST_PROVIDER_DATA.cost_providers as CostProvider[]
     } else {
       // Use real API - fetch from getCostProviders endpoint
+      console.log('🚀 ClientEdit - Calling apiClient.getCostProviders...')
       const response = await apiClient.getCostProviders()
+      console.log('📦 ClientEdit - CostProviders response:', response)
+      
       if (response.success && response.data) {
-        costProviders.value = response.data
+        if (Array.isArray(response.data)) {
+          console.log('✅ ClientEdit - Cost providers array received:', response.data.length, 'providers')
+          costProviders.value = response.data
+        } else if (response.data.cost_providers && Array.isArray(response.data.cost_providers)) {
+          console.log('✅ ClientEdit - Cost providers nested array received:', response.data.cost_providers.length, 'providers')
+          costProviders.value = response.data.cost_providers
+        } else {
+          console.error('❌ ClientEdit - Unexpected cost providers response structure:', response.data)
+          throw new Error('Invalid cost providers response format')
+        }
+      } else {
+        throw new Error(response.error || 'Failed to fetch cost providers')
       }
     }
 

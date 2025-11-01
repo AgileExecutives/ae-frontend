@@ -10,10 +10,21 @@
     >
       <template #content>
         <div class="container flex flex-col h-full lg:h-screen mx-auto pb-4 lg:px-4">
-      <ViewHeader title="Calendar">
+      <ViewHeader :title="calendarTitle">
         <template #buttons>
-          <!-- View Toggle Buttons -->
-          <div class="btn-group flex gap-2">
+          <!-- Calendar Color Indicator -->
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1">
+              <div 
+                class="w-3 h-3 rounded-full" 
+                :class="`bg-${calendar.calendarColor.value}`"
+                :title="`Calendar Color: ${calendar.calendarColor.value}`"
+              ></div>
+              <span class="text-sm text-base-content/70 hidden lg:inline">{{ calendar.calendarColor.value }}</span>
+            </div>
+          
+            <!-- View Toggle Buttons -->
+            <div class="btn-group flex gap-2">
             <button 
               class="btn btn-sm" 
               :class="{ 'btn-active': showWeekView }"
@@ -35,6 +46,7 @@
             >
               Year
             </button>
+            </div>
           </div>
           
           <button class="btn btn-primary ml-2" @click="openAddMeeting">
@@ -50,8 +62,8 @@
         <!-- Day View -->
               <CalendarDay
                 v-if="showDayView"
-                :date="currentDate"
-                :meetings="calendar.getDayEvents()"
+                :date="calendar.currentDate.value"
+                :meetings="calendar.currentDayEvents.value"
                 :start-hour="7"
                 :end-hour="21"
                 :slot-height="6"
@@ -66,7 +78,7 @@
               <!-- Week View -->
               <CalendarWeek
                 v-if="showWeekView"
-                :date="currentDate"
+                :date="calendar.currentDate.value"
                 :meetings="calendar.currentWeekEvents.value"
                 :start-hour="7"
                 :end-hour="21"
@@ -85,10 +97,11 @@
               <!-- Month View -->
               <CalendarMonth
                 v-if="showMonthView"
-                :date="currentDate"
+                :date="calendar.currentDate.value"
                 :meetings="calendar.getMonthEvents()"
                 @meeting-click="handleMeetingClick"
                 @date-click="handleDateClick"
+                @week-click="handleWeekClick"
                 @previous-month="calendar.prevMonth"
                 @next-month="calendar.nextMonth"
                 @go-to-today="calendar.goToToday"
@@ -97,7 +110,7 @@
               <!-- Year View -->
               <CalendarYear
                 v-if="showYearView"
-                :date="currentDate"
+                :date="calendar.currentDate.value"
                 :meetings="calendar.getYearEvents()"
                 @meeting-click="handleMeetingClick"
                 @month-click="handleMonthClick"
@@ -268,16 +281,19 @@ enum CalendarViewType {
 interface Meeting {
   id: string
   title: string
-  date?: string
-  startTime: string
-  endTime: string
+  startTime: string // HH:MM format
+  endTime: string   // HH:MM format
+  classification: 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error' | 'school_holiday'
+  type?: string // Original backend type for holidays and other identification
   description?: string
-  type: 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error'
   attendees?: string[]
+  date?: string // Start date - YYYY-MM-DD format
+  endDate?: string // End date - YYYY-MM-DD format (for multi-day events)
+  isAllDay?: boolean // All-day event flag
+  isMultiDay?: boolean // Flag to indicate if event spans multiple days
 }
 
-// Current date for the calendar (from composable)
-const currentDate = calendar.currentDate
+// Use calendar.currentDate.value directly - no local reference needed
 
 // View states  
 const isMobile = ref(false)
@@ -296,6 +312,11 @@ const initializeView = () => {
 // Current view computed for mobile navbar
 const currentView = computed((): 'week' | 'month' | 'year' | 'day' => {
   return currentCalendarView.value as 'week' | 'month' | 'year' | 'day'
+})
+
+// Calendar title with name from composable
+const calendarTitle = computed(() => {
+  return calendar.calendarName.value || 'Calendar'
 })
 
 // View type computed properties
@@ -393,7 +414,7 @@ const handleMeetingClick = (meeting: any) => {
 const handleTimeSlotClick = (time: string) => {
   console.log('Time slot clicked:', time)
   selectedMeeting.value = null
-  newMeeting.value.date = currentDate.value.toISOString().split('T')[0] || ''
+  newMeeting.value.date = calendar.currentDate.value.toISOString().split('T')[0] || ''
   newMeeting.value.startTime = time
   
   // Set end time to 1 hour later
@@ -418,9 +439,18 @@ const handleDateClick = (dateStr: string) => {
   showMeetingDetails.value = true
 }
 
+const handleWeekClick = (dateStr: string) => {
+  console.log('Week clicked, switching to week view for date:', dateStr)
+  // Parse the date and set it as current date
+  const date = new Date(dateStr)
+  calendar.goToDate(date)
+  // Switch to week view
+  setWeekView()
+}
+
 const handleMonthClick = (monthIndex: number) => {
   console.log('Month clicked:', monthIndex)
-  const newDate = new Date(currentDate.value)
+  const newDate = new Date(calendar.currentDate.value)
   newDate.setMonth(monthIndex)
   calendar.goToDate(newDate)
   // Switch to month view when a month is clicked
@@ -457,10 +487,12 @@ onMounted(async () => {
   await calendar.ensureInitialized()
   await calendar.loadWeekEvents()
   
-  // Debug: Log current week meetings
+  // Debug: Log current week meetings and calendar metadata
   console.log('📅 Calendar View - Current week meetings:', calendar.currentWeekEvents.value)
   console.log('📅 Calendar View - Calendar events:', calendar.events.value)
   console.log('📅 Calendar View - Current date:', calendar.currentDate.value)
+  console.log('📅 Calendar View - Calendar name:', calendar.calendarName.value)
+  console.log('📅 Calendar View - Calendar color:', calendar.calendarColor.value)
 })
 
 onUnmounted(() => {

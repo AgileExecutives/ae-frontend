@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-vue-next'
 import ViewCard from '../ViewCard.vue'
 
@@ -8,10 +8,14 @@ interface Meeting {
   title: string
   startTime: string // HH:MM format
   endTime: string   // HH:MM format
-  type: 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error'
+  classification: 'primary' | 'secondary' | 'accent' | 'info' | 'success' | 'warning' | 'error' | 'school_holiday'
+  type?: string // Original backend type for holidays and other identification
   description?: string
   attendees?: string[]
-  date?: string // YYYY-MM-DD format, optional for sample meetings
+  date?: string // Start date - YYYY-MM-DD format
+  endDate?: string // End date - YYYY-MM-DD format (for multi-day events)
+  isAllDay?: boolean // All-day event flag
+  isMultiDay?: boolean // Flag to indicate if event spans multiple days
 }
 
 const props = withDefaults(defineProps<{
@@ -38,6 +42,16 @@ const emit = defineEmits<{
   nextDay: []    
   goToToday: []
 }>()
+
+// Debug watch for meetings prop
+watch(() => props.meetings, (newMeetings) => {
+  console.log('📅 CalendarDay received meetings:', newMeetings.length)
+  newMeetings.forEach(meeting => {
+    if (meeting.title && meeting.title.includes('Allerheiligen')) {
+      console.log('📅 CalendarDay received Allerheiligen:', meeting)
+    }
+  })
+}, { immediate: true })
 
 // Screen size detection
 const isMobile = ref(false)
@@ -125,15 +139,70 @@ const timeSlots = computed(() => {
   return slots
 })
 
-// Process meetings for the current day
+// Priority system for all-day events: public_holiday > other all day > school_holiday
+const getEventPriority = (event: Meeting): number => {
+  if (event.type === 'public_holiday' || event.type === 'holiday' || event.type === 'feiertag') {
+    return 3 // Highest priority
+  }
+  if (event.classification === 'school_holiday' || event.type === 'school_holiday') {
+    return 1 // Lowest priority
+  }
+  return 2 // Other all-day events - medium priority
+}
+
+// Sort all-day events by priority (highest first)
+const sortAllDayEventsByPriority = (events: Meeting[]): Meeting[] => {
+  return [...events].sort((a, b) => getEventPriority(b) - getEventPriority(a))
+}
+
+// Separate all-day events from regular timed events
+const allDayEvents = computed(() => {
+  const allDay = props.meetings.filter(meeting => {
+    // Check if meeting is all-day based on backend field or time indicators
+    const isAllDay = meeting.isAllDay === true ||
+                      (meeting.startTime === '00:00' && meeting.endTime === '23:59')
+    
+    // Debug logging for Allerheiligen
+    if (meeting.title && meeting.title.includes('Allerheiligen')) {
+      console.log('📅 CalendarDay - Allerheiligen all-day check:', {
+        title: meeting.title,
+        isAllDay: meeting.isAllDay,
+        startTime: meeting.startTime,
+        endTime: meeting.endTime,
+        passesFilter: isAllDay
+      })
+    }
+    
+    return isAllDay
+  })
+  
+  console.log('📅 CalendarDay - All-day events:', allDay.length, 'out of', props.meetings.length, 'total meetings')
+  return sortAllDayEventsByPriority(allDay)
+})
+
+const timedEvents = computed(() => {
+  return props.meetings.filter(meeting => {
+    // Only timed events (not all-day)
+    return meeting.isAllDay !== true &&
+           !((meeting.startTime === '00:00' && meeting.endTime === '23:59') ||
+             (meeting.startTime === '00:00' && meeting.endTime === '00:00'))
+  })
+})
+
+// Process timed meetings for the current day (excluding all-day events)
 const processedMeetings = computed(() => {
-  return props.meetings
+  console.log('📅 CalendarDay - Processing', timedEvents.value.length, 'timed meetings for', dayData.value.dateStr)
+  return timedEvents.value
     .filter(meeting => {
       if (!meeting.date) return false
       
       // Convert ISO format to simple date for comparison
       const meetingDateStr = (meeting.date || '').split('T')[0]
-      return meetingDateStr === dayData.value.dateStr
+      const isMatch = meetingDateStr === dayData.value.dateStr
+      if (isMatch) {
+        console.log('📅 CalendarDay - Found matching meeting:', meeting.title, 'for', dayData.value.dateStr)
+      }
+      return isMatch
     })
     .map(meeting => {
       const startTime = meeting.startTime.split(':').map(Number)
@@ -205,6 +274,59 @@ const currentTimeString = computed(() => {
   })
 })
 
+// Meeting color mapping for Tailwind CSS classes - solid colors for visibility
+const getMeetingClasses = (classification: string, eventType?: string) => {
+  // Special handling for public holidays - always red
+  if (eventType === 'public_holiday' || eventType === 'holiday' || eventType === 'feiertag') {
+    console.log('🎄 Public holiday detected in day view, applying red styling:', eventType)
+    return 'bg-red-500 text-white border-red-600'
+  }
+  
+  // Ensure we have a valid classification, default to primary
+  const validClassification = classification || 'primary'
+  
+  // Using solid, explicit colors to ensure visibility
+  const colorMap = {
+    'primary': 'bg-blue-500 text-white border-blue-600',
+    'secondary': 'bg-purple-500 text-white border-purple-600',
+    'accent': 'bg-pink-500 text-white border-pink-600',
+    'info': 'bg-cyan-500 text-white border-cyan-600',
+    'success': 'bg-green-500 text-white border-green-600',
+    'warning': 'bg-yellow-500 text-black border-yellow-600',
+    'error': 'bg-red-500 text-white border-red-600',
+    'school_holiday': 'bg-orange-500/80 text-white border-orange-600'
+  }
+  
+  const classes = colorMap[validClassification as keyof typeof colorMap] || colorMap.primary
+  console.log('🎨 Day view meeting classes:', { classification: validClassification, eventType, classes })
+  return classes
+}
+
+// All-day event color mapping - more compact style
+const getAllDayClasses = (classification: string, eventType?: string) => {
+  // Special handling for public holidays - always red
+  if (eventType === 'public_holiday' || eventType === 'holiday' || eventType === 'feiertag') {
+    console.log('🎄 Public holiday detected in day view all-day event, applying red styling:', eventType)
+    return 'bg-red-500/90 text-white border-red-600/50'
+  }
+  
+  // Ensure we have a valid classification, default to primary
+  const validClassification = classification || 'primary'
+  
+  // Compact styling for all-day events
+  const colorMap = {
+    'primary': 'bg-blue-500/80 text-white border-blue-600/50',
+    'secondary': 'bg-purple-500/80 text-white border-purple-600/50',
+    'accent': 'bg-pink-500/80 text-white border-pink-600/50',
+    'info': 'bg-cyan-500/80 text-white border-cyan-600/50',
+    'success': 'bg-green-500/80 text-white border-green-600/50',
+    'warning': 'bg-yellow-500/80 text-black border-yellow-600/50',
+    'error': 'bg-red-500/80 text-white border-red-600/50'
+  }
+  
+  return colorMap[validClassification as keyof typeof colorMap] || colorMap.primary
+}
+
 // Day title for ViewCard
 const dayTitle = computed(() => {
   if (!dayData.value) return 'Day View'
@@ -245,6 +367,60 @@ const dayTitle = computed(() => {
 
     <template #content>
       <div class="flex flex-col h-full p-0">
+
+      <!-- All-Day Events Section -->
+      <div v-if="allDayEvents.length > 0" class="border-b border-base-200 p-2 bg-base-50/50 relative group">
+        <div class="text-xs font-medium text-base-content/70 mb-2">All Day</div>
+        
+        <!-- Single all-day event -->
+        <div v-if="allDayEvents.length === 1 && allDayEvents[0]" class="space-y-1">
+          <div 
+            class="text-xs px-2 py-1 rounded border cursor-pointer"
+            :class="getAllDayClasses(allDayEvents[0].classification || 'primary', allDayEvents[0].type)"
+            :title="allDayEvents[0].title"
+            @click="handleMeetingClick(allDayEvents[0])"
+          >
+            {{ allDayEvents[0].title }}
+          </div>
+        </div>
+        
+        <!-- Multiple all-day events stack - Daisy UI style -->
+        <div v-else class="relative">
+          <div class="stack">
+            <!-- Stack elements (back to front) - only show top 3 for visual effect -->
+            <div 
+              v-for="(event, index) in allDayEvents.slice(0, 3)"
+              :key="`stack-${event.id}-${index}`"
+              class="text-xs px-2 py-1 rounded border cursor-pointer"
+              :class="getAllDayClasses(event.classification || 'primary', event.type)"
+              :style="{ zIndex: allDayEvents.length - index }"
+              @click="handleMeetingClick(event)"
+            >
+              {{ event.title }}
+            </div>
+          </div>
+          
+          <!-- Hover tooltip with all events (priority order) -->
+          <div class="absolute top-full left-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none group-hover:pointer-events-auto">
+            <div class="bg-base-100 text-base-content p-3 rounded-lg shadow-xl border border-base-300 min-w-[200px] max-w-[300px]">
+              <div class="font-semibold mb-2">All-day events ({{ allDayEvents.length }})</div>
+              <div class="text-xs text-base-content/60 mb-2">Priority: Public holidays → Other events → School holidays</div>
+              <div class="space-y-2">
+                <div 
+                  v-for="event in allDayEvents"
+                  :key="event.id"
+                  class="text-sm p-2 rounded cursor-pointer hover:bg-base-200"
+                  :class="getAllDayClasses(event.classification || 'primary', event.type)"
+                  @click="handleMeetingClick(event)"
+                >
+                  <div class="font-medium">{{ event.title }}</div>
+                  <div v-if="event.description" class="text-xs opacity-75 mt-1">{{ event.description }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Calendar Body -->
       <div 
@@ -308,7 +484,7 @@ const dayTitle = computed(() => {
               v-for="meeting in processedMeetings"
               :key="meeting.id"
               class="absolute z-10 p-1 rounded shadow-sm cursor-pointer transition-all hover:shadow-md"
-              :class="`bg-${meeting.type} text-${meeting.type}-content`"
+              :class="getMeetingClasses(meeting.classification, meeting.type)"
               :style="{
                 top: `${meeting.top}px`,
                 height: `${meeting.height}px`,
