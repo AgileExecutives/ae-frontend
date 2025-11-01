@@ -72,11 +72,14 @@
                 :end-hour="21"
                 :slot-height="6"
                 :show-current-time="true"
+                :is-loading="isLoadingEvents"
+                :error="eventError"
                 @meeting-click="handleMeetingClick"
                 @time-slot-click="handleTimeSlotClick"
                 @previous-week="previousWeek"
                 @next-week="nextWeek"
                 @go-to-today="goToToday"
+                @retry-load="retryLoadEvents"
               />
               
               <!-- Month View -->
@@ -186,7 +189,7 @@
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-base-content/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <span class="text-sm">{{ formatMeetingDate(selectedMeeting.date) }}</span>
+                  <span class="text-sm">{{ formatMeetingDate(selectedMeeting.date || '') }}</span>
                 </div>
                 
                 <div class="flex items-center gap-2">
@@ -248,6 +251,10 @@ import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-vue-next'
 import DrawerLayout from '@/components/layout/DrawerLayout.vue'
 import RightDrawer from '@/components/RightDrawer.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
+import { useCalendar } from '@/composables/useCalendar'
+
+// Use the calendar composable
+const calendar = useCalendar()
 
 // Calendar view types
 enum CalendarViewType {
@@ -257,11 +264,11 @@ enum CalendarViewType {
   Year = 'year'
 }
 
-// Local type definition for Meeting with date
-interface LocalMeeting {
+// Meeting type for the calendar component 
+interface Meeting {
   id: string
   title: string
-  date: string
+  date?: string
   startTime: string
   endTime: string
   description?: string
@@ -269,8 +276,8 @@ interface LocalMeeting {
   attendees?: string[]
 }
 
-// Current date for the calendar
-const currentDate = ref(new Date())
+// Current date for the calendar (from composable)
+const currentDate = calendar.currentDate
 
 // View states  
 const isMobile = ref(false)
@@ -297,112 +304,10 @@ const showWeekView = computed(() => currentCalendarView.value === CalendarViewTy
 const showMonthView = computed(() => currentCalendarView.value === CalendarViewType.Month)
 const showYearView = computed(() => currentCalendarView.value === CalendarViewType.Year)
 
-// Sample meetings data
-const meetings = ref<LocalMeeting[]>([
-  // Monday
-  {
-    id: '1',
-    title: 'Team Standupf',
-    startTime: '09:00',
-    endTime: '09:30',
-    type: 'primary',
-    description: 'Daily team synchronization',
-    attendees: ['Alice', 'Bob', 'Charlie'],
-    date: '2025-10-27' // Monday
-  },
-  {
-    id: '2',
-    title: 'Sprint Planning',
-    startTime: '14:00',
-    endTime: '16:00',
-    type: 'warning',
-    description: 'Next sprint planning meeting',
-    attendees: ['Scrum Team'],
-    date: '2025-10-27'
-  },
-  // Tuesday
-  {
-    id: '3',
-    title: 'Design Review',
-    startTime: '10:15',
-    endTime: '11:00',
-    type: 'secondary',
-    description: 'UI/UX design feedback session',
-    attendees: ['Design Team'],
-    date: '2025-10-28' // Tuesday
-  },
-  {
-    id: '4',
-    title: 'Client Call',
-    startTime: '10:30',
-    endTime: '11:15',
-    type: 'accent',
-    description: 'Project status update with client',
-    attendees: ['Client', 'PM'],
-    date: '2025-10-28'
-  },
-  // Wednesday
-  {
-    id: '5',
-    title: 'All Hands',
-    startTime: '11:00',
-    endTime: '12:00',
-    type: 'info',
-    description: 'Company wide meeting',
-    attendees: ['Everyone'],
-    date: '2025-10-29' // Wednesday
-  },
-  {
-    id: '6',
-    title: 'Code Review',
-    startTime: '14:00',
-    endTime: '15:30',
-    type: 'success',
-    description: 'Pull request review session',
-    attendees: ['Dev Team'],
-    date: '2025-10-29'
-  },
-  // Thursday
-  {
-    id: '7',
-    title: 'Product Demo',
-    startTime: '15:00',
-    endTime: '16:00',
-    type: 'primary',
-    description: 'Weekly product demonstration',
-    attendees: ['Product Team'],
-    date: '2025-10-30' // Thursday
-  },
-  // Friday
-  {
-    id: '8',
-    title: 'Team Retrospective',
-    startTime: '08:30',
-    endTime: '09:15',
-    type: 'error',
-    description: 'Weekly team retrospective',
-    attendees: ['Full Team'],
-    date: '2025-10-31' // Friday
-  },
-  {
-    id: '9',
-    title: 'Happy Hour',
-    startTime: '17:00',
-    endTime: '18:00',
-    type: 'success',
-    description: 'End of week celebration',
-    date: '2025-10-31'
-  },
-  {
-    id: '10',
-    title: 'Happy Hour',
-    startTime: '17:00',
-    endTime: '18:00',
-    type: 'success',
-    description: 'End of week celebration',
-    date: '2025-10-28'
-  }
-])
+// Calendar data from composable
+const meetings = calendar.events
+const isLoadingEvents = calendar.isLoading
+const eventError = calendar.error
 
 // Add meeting modal
 const showAddMeeting = ref(false)
@@ -417,30 +322,20 @@ const newMeeting = ref({
 // Meeting details drawer
 const showMeetingDetails = ref(false)
 const drawerPinned = ref(false)
-const selectedMeeting = ref<LocalMeeting | null>(null)
+const selectedMeeting = ref<Meeting | null>(null)
 
-// Computed properties for stats
+// Computed properties for stats (using composable data)
 const todayMeetings = computed(() => {
-  const today = new Date().toISOString().split('T')[0]
-  return meetings.value.filter((meeting: LocalMeeting) => meeting.date === today)
+  return calendar.getDayEvents()
 })
 
 const weekMeetings = computed(() => {
-  const startOfWeek = new Date(currentDate.value)
-  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay())
-  
-  const endOfWeek = new Date(startOfWeek)
-  endOfWeek.setDate(endOfWeek.getDate() + 6)
-  
-  return meetings.value.filter((meeting: LocalMeeting) => {
-    const meetingDate = new Date(meeting.date)
-    return meetingDate >= startOfWeek && meetingDate <= endOfWeek
-  })
+  return calendar.getWeekEvents()
 })
 
 const upcomingMeetingsText = computed(() => {
-  const upcoming = todayMeetings.value.filter((meeting: LocalMeeting) => {
-    const now = new Date()
+  const now = new Date()
+  const upcoming = todayMeetings.value.filter(meeting => {
     const meetingTime = new Date(`${meeting.date} ${meeting.startTime}`)
     return meetingTime > now
   })
@@ -448,7 +343,7 @@ const upcomingMeetingsText = computed(() => {
 })
 
 const todayHours = computed(() => {
-  return todayMeetings.value.reduce((total: number, meeting: LocalMeeting) => {
+  return todayMeetings.value.reduce((total: number, meeting) => {
     const [startHour, startMin] = meeting.startTime.split(':').map(Number)
     const [endHour, endMin] = meeting.endTime.split(':').map(Number)
     const safeStartHour = startHour ?? 0
@@ -460,62 +355,35 @@ const todayHours = computed(() => {
   }, 0).toFixed(1)
 })
 
-// Navigation functions
-const previousWeek = () => {
-  const newDate = new Date(currentDate.value)
-  newDate.setDate(newDate.getDate() - 7)
-  currentDate.value = newDate
-}
-
-const nextWeek = () => {
-  const newDate = new Date(currentDate.value)
-  newDate.setDate(newDate.getDate() + 7)
-  currentDate.value = newDate
-}
-
-const previousMonth = () => {
-  const newDate = new Date(currentDate.value)
-  newDate.setMonth(newDate.getMonth() - 1)
-  currentDate.value = newDate
-}
-
-const nextMonth = () => {
-  const newDate = new Date(currentDate.value)
-  newDate.setMonth(newDate.getMonth() + 1)
-  currentDate.value = newDate
-}
-
-const previousYear = () => {
-  const newDate = new Date(currentDate.value)
-  newDate.setFullYear(newDate.getFullYear() - 1)
-  currentDate.value = newDate
-}
-
-const nextYear = () => {
-  const newDate = new Date(currentDate.value)
-  newDate.setFullYear(newDate.getFullYear() + 1)
-  currentDate.value = newDate
-}
-
-const goToToday = () => {
-  currentDate.value = new Date()
-}
+// Navigation functions (using composable)
+const previousWeek = () => calendar.prevWeek()
+const nextWeek = () => calendar.nextWeek()
+const previousMonth = () => calendar.prevMonth()
+const nextMonth = () => calendar.nextMonth()
+const previousYear = () => calendar.prevYear()
+const nextYear = () => calendar.nextYear()
+const goToToday = () => calendar.goToToday()
 
 const previousDay = () => {
   const newDate = new Date(currentDate.value)
   newDate.setDate(newDate.getDate() - 1)
-  currentDate.value = newDate
+  calendar.goToDate(newDate)
 }
 
 const nextDay = () => {
   const newDate = new Date(currentDate.value)
   newDate.setDate(newDate.getDate() + 1)
-  currentDate.value = newDate
+  calendar.goToDate(newDate)
 }
 
 // Handle view change from mobile navbar
 const handleViewChange = (view: 'week' | 'month' | 'year' | 'day') => {
   currentCalendarView.value = view as CalendarViewType
+}
+
+// Retry loading events
+const retryLoadEvents = async () => {
+  await calendar.loadWeekEvents()
 }
 
 // View change helper functions
@@ -524,86 +392,15 @@ const setMonthView = () => currentCalendarView.value = CalendarViewType.Month
 const setYearView = () => currentCalendarView.value = CalendarViewType.Year
 const setDayView = () => currentCalendarView.value = CalendarViewType.Day
 
-// Convert local meetings to calendar format
-const currentDayMeetings = computed(() => {
-  const today = currentDate.value.toISOString().split('T')[0]
-  return meetings.value
-    .filter((meeting: LocalMeeting) => meeting.date === today)
-    .map((meeting: LocalMeeting) => ({
-      id: meeting.id,
-      title: meeting.title,
-      startTime: meeting.startTime,
-      endTime: meeting.endTime,
-      type: meeting.type,
-      description: meeting.description,
-      attendees: meeting.attendees,
-      date: meeting.date
-    }))
-})
-
-const currentWeekMeetings = computed(() => {
-  return weekMeetings.value.map((meeting: LocalMeeting) => ({
-    id: meeting.id,
-    title: meeting.title,
-    startTime: meeting.startTime,
-    endTime: meeting.endTime,
-    type: meeting.type,
-    description: meeting.description,
-    attendees: meeting.attendees,
-    date: meeting.date
-  }))
-})
-
-// Month meetings
-const monthMeetings = computed(() => {
-  const startOfMonth = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth(), 1)
-  const endOfMonth = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + 1, 0)
-  
-  return meetings.value.filter((meeting: LocalMeeting) => {
-    const meetingDate = new Date(meeting.date)
-    return meetingDate >= startOfMonth && meetingDate <= endOfMonth
-  })
-})
-
-const currentMonthMeetings = computed(() => {
-  return monthMeetings.value.map((meeting: LocalMeeting) => ({
-    id: meeting.id,
-    title: meeting.title,
-    startTime: meeting.startTime,
-    endTime: meeting.endTime,
-    type: meeting.type,
-    description: meeting.description,
-    attendees: meeting.attendees,
-    date: meeting.date
-  }))
-})
-
-// Year meetings
-const yearMeetings = computed(() => {
-  const startOfYear = new Date(currentDate.value.getFullYear(), 0, 1)
-  const endOfYear = new Date(currentDate.value.getFullYear(), 11, 31)
-  
-  return meetings.value.filter((meeting: LocalMeeting) => {
-    const meetingDate = new Date(meeting.date)
-    return meetingDate >= startOfYear && meetingDate <= endOfYear
-  })
-})
-
-const currentYearMeetings = computed(() => {
-  return yearMeetings.value.map((meeting: LocalMeeting) => ({
-    id: meeting.id,
-    title: meeting.title,
-    startTime: meeting.startTime,
-    endTime: meeting.endTime,
-    type: meeting.type,
-    description: meeting.description,
-    attendees: meeting.attendees,
-    date: meeting.date
-  }))
-})
+// Calendar meetings from composable - use reactive computed properties
+const currentDayMeetings = computed(() => calendar.getDayEvents(calendar.currentDate.value))
+const currentWeekMeetings = calendar.currentWeekEvents // This is already a reactive computed from the composable
+const currentMonthMeetings = computed(() => calendar.getMonthEvents(calendar.currentDate.value))
+const currentYearMeetings = computed(() => calendar.getYearEvents(calendar.currentDate.value))
 
 // Meeting details functions
-const formatMeetingDate = (dateStr: string) => {
+const formatMeetingDate = (dateStr?: string) => {
+  if (!dateStr) return 'No date'
   const date = new Date(dateStr)
   return date.toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -634,7 +431,7 @@ const editMeeting = () => {
     // Convert selected meeting to edit form
     newMeeting.value = {
       title: selectedMeeting.value.title,
-      date: selectedMeeting.value.date,
+      date: selectedMeeting.value.date || '',
       startTime: selectedMeeting.value.startTime,
       endTime: selectedMeeting.value.endTime,
       description: selectedMeeting.value.description || ''
@@ -683,7 +480,7 @@ const handleMonthClick = (monthIndex: number) => {
   console.log('Month clicked:', monthIndex)
   const newDate = new Date(currentDate.value)
   newDate.setMonth(monthIndex)
-  currentDate.value = newDate
+  calendar.goToDate(newDate)
   // Switch to month view when a month is clicked
   currentCalendarView.value = CalendarViewType.Month
 }
@@ -701,30 +498,27 @@ const closeAddMeeting = () => {
   }
 }
 
-const saveMeeting = () => {
-  if (newMeeting.value.title && newMeeting.value.date && newMeeting.value.startTime && newMeeting.value.endTime) {
-    const meeting: LocalMeeting = {
-      id: Date.now().toString(),
-      title: newMeeting.value.title,
-      date: newMeeting.value.date,
-      startTime: newMeeting.value.startTime,
-      endTime: newMeeting.value.endTime,
-      description: newMeeting.value.description,
-      type: 'primary'
-    }
-    
-    meetings.value.push(meeting)
-    closeAddMeeting()
-  }
+const saveMeeting = async () => {
+  console.log('Save meeting not yet implemented with composable')
+  // TODO: Implement calendar event creation through composable
+  closeAddMeeting()
 }
 
-onMounted(() => {
+onMounted(async () => {
   // Set current date to today
-  currentDate.value = new Date()
+  calendar.goToToday()
   // Initialize view based on screen size
   initializeView()
   // Listen for resize events
   window.addEventListener('resize', initializeView)
+  // Initialize calendar data
+  await calendar.ensureInitialized()
+  await calendar.loadWeekEvents()
+  
+  // Debug: Log current week meetings
+  console.log('📅 Calendar View - Current week meetings:', currentWeekMeetings.value)
+  console.log('📅 Calendar View - Calendar events:', calendar.events.value)
+  console.log('📅 Calendar View - Current date:', calendar.currentDate.value)
 })
 
 onUnmounted(() => {

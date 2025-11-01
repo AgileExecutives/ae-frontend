@@ -79,7 +79,19 @@ const calendarDays = computed(() => {
     const isToday = dateStr === new Date().toISOString().split('T')[0]
     
     // Get meetings for this day
-    const dayMeetings = props.meetings.filter(meeting => meeting.date === dateStr)
+    const dayMeetings = props.meetings.filter(meeting => {
+      if (!meeting.date) return false
+      
+      // Handle different date formats
+      let meetingDateStr: string = meeting.date
+      if (meetingDateStr.includes('T')) {
+        // Convert ISO format "2025-10-27T00:00:00Z" to "2025-10-27"
+        meetingDateStr = meetingDateStr.split('T')[0] || ''
+      }
+      
+      console.log('📅 CalendarMonth - Comparing:', meetingDateStr, 'with', dateStr)
+      return meetingDateStr === dateStr
+    })
     
     days.push({
       date,

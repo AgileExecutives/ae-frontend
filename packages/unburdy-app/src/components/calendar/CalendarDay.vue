@@ -128,7 +128,19 @@ const timeSlots = computed(() => {
 // Process meetings for the current day
 const processedMeetings = computed(() => {
   return props.meetings
-    .filter(meeting => meeting.date === dayData.value.dateStr)
+    .filter(meeting => {
+      if (!meeting.date) return false
+      
+      // Handle different date formats
+      let meetingDateStr: string = meeting.date
+      if (meetingDateStr.includes('T')) {
+        // Convert ISO format "2025-10-27T00:00:00Z" to "2025-10-27"
+        meetingDateStr = meetingDateStr.split('T')[0] || ''
+      }
+      
+      console.log('📅 CalendarDay - Comparing:', meetingDateStr, 'with', dayData.value.dateStr)
+      return meetingDateStr === dayData.value.dateStr
+    })
     .map(meeting => {
       const startTime = meeting.startTime.split(':').map(Number)
       const endTime = meeting.endTime.split(':').map(Number)

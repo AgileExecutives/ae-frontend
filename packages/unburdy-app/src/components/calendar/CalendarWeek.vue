@@ -21,13 +21,17 @@ const props = withDefaults(defineProps<{
   slotHeight?: number
   date?: Date
   showCurrentTime?: boolean
+  isLoading?: boolean
+  error?: string | null
 }>(), {
   meetings: () => [],
   startHour: 8,
   endHour: 18,
   slotHeight: 8,
   date: () => new Date(),
-  showCurrentTime: true
+  showCurrentTime: true,
+  isLoading: false,
+  error: null
 })
 
 const emit = defineEmits<{
@@ -37,6 +41,7 @@ const emit = defineEmits<{
   previousWeek: []
   nextWeek: []    
   goToToday: []
+  retryLoad: []
 }>()
 
 // Current time tracking
@@ -165,7 +170,16 @@ const processedMeetings = computed(() => {
     const dayMeetings = displayMeetings.value.filter(meeting => {
       // For sample meetings without date, show on current day
       if (!meeting.date) return dayIndex === 0
-      return meeting.date === day.dateStr
+      
+      // Handle different date formats
+      let meetingDateStr: string = meeting.date || ''
+      if (meetingDateStr.includes('T')) {
+        // Convert ISO format "2025-10-27T00:00:00Z" to "2025-10-27"
+        meetingDateStr = meetingDateStr.split('T')[0] || ''
+      }
+      
+      console.log('📅 CalendarWeek - Comparing:', meetingDateStr, 'with', day.dateStr)
+      return meetingDateStr === day.dateStr
     })
 
     // Sort meetings by start time for this day
@@ -230,9 +244,11 @@ const processedMeetings = computed(() => {
 })
 
 // Use sample data if no meetings provided
-const displayMeetings = computed(() => 
-  props.meetings.length > 0 ? props.meetings : []
-)
+const displayMeetings = computed(() => {
+  console.log('📅 CalendarWeek - Props meetings:', props.meetings)
+  console.log('📅 CalendarWeek - Display meetings length:', props.meetings.length)
+  return props.meetings.length > 0 ? props.meetings : []
+})
 
 // Handle time slot click
 const handleTimeSlotClick = (time: string, dateStr?: string) => {
@@ -294,14 +310,32 @@ const weekTitle = computed(() => {
 <template>
   <ViewCard :title="weekTitle">
     <template #actions>
-      <button class="btn btn-xs lg:btn-sm btn-outline btn-circle" @click="previousWeek" title="Previous Week">
-        <ChevronLeft class="w-3 h-3 lg:w-4 lg:h-4" />
+      <button 
+        class="btn btn-xs lg:btn-sm btn-outline btn-circle" 
+        :class="{ 'loading loading-spinner': isLoading }"
+        :disabled="isLoading"
+        @click="previousWeek" 
+        title="Previous Week"
+      >
+        <ChevronLeft v-if="!isLoading" class="w-3 h-3 lg:w-4 lg:h-4" />
       </button>
-      <button class="btn btn-xs lg:btn-sm btn-outline btn-circle" @click="nextWeek" title="Next Week">
-        <ChevronRight class="w-3 h-3 lg:w-4 lg:h-4" />
+      <button 
+        class="btn btn-xs lg:btn-sm btn-outline btn-circle" 
+        :class="{ 'loading loading-spinner': isLoading }"
+        :disabled="isLoading"
+        @click="nextWeek" 
+        title="Next Week"
+      >
+        <ChevronRight v-if="!isLoading" class="w-3 h-3 lg:w-4 lg:h-4" />
       </button>
-      <button class="btn btn-xs lg:btn-sm btn-primary btn-circle" @click="goToToday" title="Go to Today">
-        <CalendarDays class="w-3 h-3 lg:w-4 lg:h-4" />
+      <button 
+        class="btn btn-xs lg:btn-sm btn-primary btn-circle" 
+        :class="{ 'loading loading-spinner': isLoading }"
+        :disabled="isLoading"
+        @click="goToToday" 
+        title="Go to Today"
+      >
+        <CalendarDays v-if="!isLoading" class="w-3 h-3 lg:w-4 lg:h-4" />
       </button>
     </template>
 
@@ -438,11 +472,19 @@ const weekTitle = computed(() => {
     </template>
 
     <template #footer>
-      <div class="text-sm text-base-content/70">
-        {{ displayMeetings.length }} meetings scheduled
+      <div class="text-sm text-base-content/70 flex items-center gap-2">
+        <span v-if="isLoading">Loading events...</span>
+        <span v-else>{{ displayMeetings.length }} meetings scheduled</span>
+        <div v-if="isLoading" class="loading loading-spinner loading-xs"></div>
       </div>
       <div class="text-sm text-base-content/70">
         Current time: {{ currentTimeString }}
+      </div>
+      <div v-if="error" class="text-sm text-error flex items-center gap-2">
+        <span>Error: {{ error }}</span>
+        <button class="btn btn-xs btn-outline" @click="$emit('retryLoad')">
+          Retry
+        </button>
       </div>
     </template>
   </ViewCard>

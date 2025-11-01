@@ -101,9 +101,21 @@ const monthsData = computed(() => {
     // Count meetings in this month
     const monthMeetings = props.meetings.filter(meeting => {
       if (!meeting.date) return false
-      const meetingDate = new Date(meeting.date)
-      return meetingDate.getFullYear() === currentYear && 
-             meetingDate.getMonth() === index
+      
+      // Handle different date formats and avoid timezone issues
+      let meetingDateStr: string = meeting.date
+      if (meetingDateStr.includes('T')) {
+        // Convert ISO format "2025-10-27T00:00:00Z" to "2025-10-27"
+        meetingDateStr = meetingDateStr.split('T')[0] || ''
+      }
+      
+      // Parse as local date to avoid timezone issues
+      const [year, month, day] = meetingDateStr.split('-').map(Number)
+      const safeYear = year ?? 0
+      const safeMonth = (month ?? 1) - 1 // Month is 0-based
+      
+      console.log('📅 CalendarYear - Comparing:', safeYear, safeMonth, 'with', currentYear, index)
+      return safeYear === currentYear && safeMonth === index
     })
     
     // Group meetings by type for stats
