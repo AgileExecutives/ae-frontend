@@ -28,34 +28,59 @@ const error = ref<string | null>(null)
 
 // ========== DERIVED STATE (COMPUTED PROPERTIES) ==========
 
-// Filtered client lists by status
+// Filtered client lists by status (sorted by last name)
 const activeClients = computed(() => 
-  clients.value.filter((client: Client) => client.status === 'active')
+  clients.value
+    .filter((client: Client) => client.status === 'active')
+    .sort((a: Client, b: Client) => {
+      const aLastName = (a.last_name || '').toLowerCase()
+      const bLastName = (b.last_name || '').toLowerCase()
+      return aLastName.localeCompare(bLastName)
+    })
 )
 
 const waitingClients = computed(() => 
-  clients.value.filter((client: Client) => client.status === 'waiting')
+  clients.value
+    .filter((client: Client) => client.status === 'waiting')
+    .sort((a: Client, b: Client) => {
+      const aLastName = (a.last_name || '').toLowerCase()
+      const bLastName = (b.last_name || '').toLowerCase()
+      return aLastName.localeCompare(bLastName)
+    })
 )
 
 const archivedClients = computed(() => 
-  clients.value.filter((client: Client) => client.status === 'archived')
+  clients.value
+    .filter((client: Client) => client.status === 'archived')
+    .sort((a: Client, b: Client) => {
+      const aLastName = (a.last_name || '').toLowerCase()
+      const bLastName = (b.last_name || '').toLowerCase()
+      return aLastName.localeCompare(bLastName)
+    })
 )
 
-// Search-filtered clients
+// Search-filtered clients (sorted by last name)
 const filteredClients = computed(() => {
-  if (!searchQuery.value.trim()) {
-    return clients.value
+  let filteredList = clients.value
+  
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim()
+    filteredList = clients.value.filter((client: Client) => {
+      const firstName = (client.first_name || '').toLowerCase()
+      const lastName = (client.last_name || '').toLowerCase()
+      const email = (client.email || '').toLowerCase()
+      
+      return firstName.includes(query) || 
+             lastName.includes(query) || 
+             email.includes(query)
+    })
   }
-
-  const query = searchQuery.value.toLowerCase().trim()
-  return clients.value.filter((client: Client) => {
-    const firstName = (client.first_name || '').toLowerCase()
-    const lastName = (client.last_name || '').toLowerCase()
-    const email = (client.email || '').toLowerCase()
-    
-    return firstName.includes(query) || 
-           lastName.includes(query) || 
-           email.includes(query)
+  
+  // Sort by last name
+  return filteredList.sort((a: Client, b: Client) => {
+    const aLastName = (a.last_name || '').toLowerCase()
+    const bLastName = (b.last_name || '').toLowerCase()
+    return aLastName.localeCompare(bLastName)
   })
 })
 
@@ -74,13 +99,13 @@ const currentList = computed(() => {
     }
   })()
 
-  // Apply search filter
+  // Apply search filter and maintain sorting
   if (!searchQuery.value.trim()) {
     return baseList
   }
 
   const query = searchQuery.value.toLowerCase().trim()
-  return baseList.filter((client: Client) => {
+  const filtered = baseList.filter((client: Client) => {
     const firstName = (client.first_name || '').toLowerCase()
     const lastName = (client.last_name || '').toLowerCase()
     const email = (client.email || '').toLowerCase()
@@ -88,6 +113,13 @@ const currentList = computed(() => {
     return firstName.includes(query) || 
            lastName.includes(query) || 
            email.includes(query)
+  })
+  
+  // Sort filtered results by last name
+  return filtered.sort((a: Client, b: Client) => {
+    const aLastName = (a.last_name || '').toLowerCase()
+    const bLastName = (b.last_name || '').toLowerCase()
+    return aLastName.localeCompare(bLastName)
   })
 })
 
@@ -166,10 +198,7 @@ const setCurrentListSelection = (selection: 'active' | 'waiting' | 'archived') =
 }
 
 const setDrawerOpen = (open: boolean) => {
-  console.log('🏪 setDrawerOpen called with:', open)
-  console.log('🏪 Current isDrawerOpen value:', isDrawerOpen.value)
   isDrawerOpen.value = open
-  console.log('🏪 New isDrawerOpen value:', isDrawerOpen.value)
 }
 
 const setDrawerPinned = (pinned: boolean) => {

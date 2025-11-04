@@ -204,12 +204,9 @@ export const useClients = () => {
   }
 
   const closeClientDetails = () => {
-    console.log('🚪 closeClientDetails called')
-    console.log('🚪 Current drawer state before close:', clientStore.isDrawerOpen.value)
     clientStore.setDrawerOpen(false)
     clientStore.setCurrentClient(null)
     clientStore.setEditMode(false)
-    console.log('🚪 Drawer state after close:', clientStore.isDrawerOpen.value)
   }
 
   const handleNameChange = (firstName: string, lastName: string) => {
