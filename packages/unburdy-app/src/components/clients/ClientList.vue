@@ -8,7 +8,7 @@ import type { Client } from '@agile-exec/api-client'
 // Use the clients composable directly
 const {
   // ========== REACTIVE DATA STORE ==========
-  allClients,
+  clients,
   activeClients,
   waitingClients,
   archivedClients,
@@ -121,7 +121,7 @@ const toggleAllClients = () => {
   if (selectedClients.value.size === filteredClients.value.length) {
     selectedClients.value.clear()
   } else {
-    selectedClients.value = new Set(filteredClients.value.map(client => client.id).filter((id): id is number => id !== undefined))
+    selectedClients.value = new Set(filteredClients.value.map((client: Client) => client.id).filter((id: number | undefined): id is number => id !== undefined))
   }
 }
 
@@ -142,18 +142,18 @@ const handleDropdownChange = (event: Event) => {
 
 const handleBulkDelete = () => {
   const selectedIds = Array.from(selectedClients.value)
-  const clientsToDelete = currentList.value.filter(client => client.id && selectedIds.includes(client.id))
+  const clientsToDelete = currentList.value.filter((client: Client) => client.id && selectedIds.includes(client.id))
   
   if (clientsToDelete.length === 0) return
   
-  const names = clientsToDelete.map(c => `${c.first_name} ${c.last_name}`).join(', ')
+  const names = clientsToDelete.map((c: Client) => `${c.first_name} ${c.last_name}`).join(', ')
   const message = clientsToDelete.length === 1 
     ? `Are you sure you want to delete ${names}?`
     : `Are you sure you want to delete ${clientsToDelete.length} clients: ${names}?`
   
   if (confirm(message)) {
     // Delete each selected client using composable
-    clientsToDelete.forEach(client => {
+    clientsToDelete.forEach((client: Client) => {
       showDeleteModal(client)
     })
     // Clear selection after deletion
@@ -164,7 +164,7 @@ const handleBulkDelete = () => {
 // Client count by status using composable data
 const clientCounts = computed(() => {
   return {
-    all: allClients.value.length,
+    all: clients.value.length,
     waiting: waitingClients.value.length,
     active: activeClients.value.length,
     archived: archivedClients.value.length

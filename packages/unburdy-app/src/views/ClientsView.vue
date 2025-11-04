@@ -182,7 +182,16 @@ const permanentlyDeleteClient = async () => {
       return
     }
     
-    // Drawer closing is handled in the store
+    console.log('🗑️ Delete successful, checking if drawer should close...')
+    console.log('🗑️ Deleted client ID:', clientToRemove.id)
+    console.log('🗑️ Selected client ID:', selectedClient.value?.id)
+    console.log('🗑️ Is drawer open:', isDrawerOpen.value)
+    
+    // Always close the drawer after successful delete (more aggressive approach)
+    if (isDrawerOpen.value) {
+      console.log('🗑️ Closing drawer...')
+      closeClientDetails()
+    }
     closeDeleteModal()
   } catch (error) {
     console.error('Failed to delete client:', error)
