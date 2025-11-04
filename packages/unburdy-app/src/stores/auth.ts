@@ -84,9 +84,9 @@ export const useAuthStore = defineStore('auth', () => {
       const apiClient = getApiClient()
       const response = await apiClient.login(credentials)
 
-      if (response && response.token && response.user) {
-        setToken(response.token)
-        setUser(response.user as User)
+      if (response && response.data && response.data.token && response.data.user) {
+        setToken(response.data.token)
+        setUser(response.data.user as User)
       } else {
         throw new Error('Invalid response from server')
       }
@@ -128,9 +128,11 @@ export const useAuthStore = defineStore('auth', () => {
       setError(null)
 
       const apiClient = getApiClient()
-      const userData = await apiClient.getCurrentUser()
+      const response = await apiClient.getCurrentUser()
       
-      if (userData) {
+      // Handle wrapped API response
+      if (response && response.success && response.data) {
+        const userData = response.data
         setUser(userData as User)
         return userData as User
       } else {

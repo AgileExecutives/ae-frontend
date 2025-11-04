@@ -82,7 +82,7 @@
           <div class="space-y-3">
             <h4 :class="formClasses.heading">Address</h4>
             <div class="space-y-4">
-              <div class="form-control flex justify-between">
+              <div class="form-control flex justify-between gap-4">
                 <label class="label">
                   <span :class="formClasses.label">Street Address</span>
                 </label>
@@ -180,7 +180,7 @@
             <h4 :class="formClasses.heading">Therapy Information</h4>
             <div class="grid grid-cols-2 gap-4">
             
-              <div class="form-control col-span-2 flex justify-between">
+              <div class="form-control col-span-2 flex justify-between gap-4">
                 <label class="label">
                   <span :class="formClasses.label">Diagnosis</span>
                 </label>
@@ -195,7 +195,7 @@
                   <input v-model="formData.invoiced_individually" type="checkbox" :class="formClasses.checkbox" />
                 </label>
               </div>
-              <div class="form-control col-span-2 flex justify-between" v-show="!formData.invoiced_individually">
+              <div class="form-control col-span-2 flex justify-between gap-4" v-show="!formData.invoiced_individually">
                 <label class="label">
                   <span :class="formClasses.label">Cost Provider</span>
                 </label>
@@ -251,11 +251,12 @@
 
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted, computed } from 'vue'
-import type { Client, CostProvider } from '@agile-exec/api-client'
+import type { Client } from '@agile-exec/api-client'
 import { getApiClient } from '@/config/api-config'
-import { appConfig, MOCK_COST_PROVIDER_DATA, MOCK_DIAGNOSTIC_STANDARDS_DATA } from '@/config/app-config'
+import { appConfig, MOCK_DIAGNOSTIC_STANDARDS_DATA } from '@/config/app-config'
 import { useI18n } from 'vue-i18n'
 import GroupedSeachSelect from '../GroupedSeachSelect.vue'
+import { useCostProviders } from '@/composables/useCostProviders'
 
 // Type definition for DiagnosticStandard
 interface DiagnosticStandard {
@@ -283,9 +284,13 @@ const {locale} = useI18n()
 // API client
 const apiClient = getApiClient()
 
-// Cost providers data
-const costProviders = ref<CostProvider[]>([])
-const loadingCostProviders = ref(false)
+// Use cost providers composable
+const {
+  costProviders,
+  isLoading: loadingCostProviders,
+  error: costProvidersError,
+  ensureInitialized: initializeCostProviders
+} = useCostProviders()
 
 // Diagnostic standards data
 const diagnosticStandards = ref<DiagnosticStandard[]>([])
@@ -320,43 +325,7 @@ const formData = reactive<Partial<Client> & { cost_provider_id?: number }>({
   cost_provider_id: undefined
 })
 
-// Load cost providers
-const loadCostProviders = async () => {
-  loadingCostProviders.value = true
-  try {
-    if (appConfig.MOCK_API) {
-      // Use mock data
-      costProviders.value = MOCK_COST_PROVIDER_DATA.cost_providers as CostProvider[]
-    } else {
-      // Use real API - fetch from getCostProviders endpoint
-      console.log('🚀 ClientEdit - Calling apiClient.getCostProviders...')
-      const response = await apiClient.getCostProviders()
-      console.log('📦 ClientEdit - CostProviders response:', response)
-      
-      if (response.success && response.data) {
-        if (Array.isArray(response.data)) {
-          console.log('✅ ClientEdit - Cost providers array received:', response.data.length, 'providers')
-          costProviders.value = response.data
-        } else if (response.data.cost_providers && Array.isArray(response.data.cost_providers)) {
-          console.log('✅ ClientEdit - Cost providers nested array received:', response.data.cost_providers.length, 'providers')
-          costProviders.value = response.data.cost_providers
-        } else {
-          console.error('❌ ClientEdit - Unexpected cost providers response structure:', response.data)
-          throw new Error('Invalid cost providers response format')
-        }
-      } else {
-        throw new Error(response.error || 'Failed to fetch cost providers')
-      }
-    }
 
-  } catch (error) {
-    console.error('Failed to load cost providers:', error)
-    // Fallback to mock data on error
-    costProviders.value = MOCK_COST_PROVIDER_DATA.cost_providers as CostProvider[]
-  } finally {
-    loadingCostProviders.value = false
-  }
-}
 
 // Load diagnostic standards
 const loadDiagnosticStandards = async () => {
@@ -367,7 +336,7 @@ const loadDiagnosticStandards = async () => {
       diagnosticStandards.value = MOCK_DIAGNOSTIC_STANDARDS_DATA.diagnostic_standards as DiagnosticStandard[]
     } else {
       // Use real API - fetch static JSON data
-      const response = await apiClient.getStatic('diagnostic_std')
+      const response = await apiClient.getStaticFile('diagnostic_std')
       if (response.success && response.data) {
         // Handle both direct array and nested object structures
         const data = response.data.diagnostic_standards || response.data
@@ -384,8 +353,8 @@ const loadDiagnosticStandards = async () => {
 }
 
 // Load cost providers and diagnostic standards on mount
-onMounted(() => {
-  loadCostProviders()
+onMounted(async () => {
+  await initializeCostProviders()
   loadDiagnosticStandards()
 })
 

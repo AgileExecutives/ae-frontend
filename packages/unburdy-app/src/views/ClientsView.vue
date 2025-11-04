@@ -22,16 +22,7 @@
           
           <!-- Client List Component -->
           <div class="flex-1 min-h-0">
-            <ClientList
-              :clients="clients"
-              :search-query="searchQuery"
-              :selected-status="selectedStatus"
-              @client-click="handleClientClick"
-              @client-edit="handleClientEdit"
-              @client-delete="handleClientDelete"
-              @status-filter="handleStatusFilter"
-              @search-change="handleSearchChange"
-            />
+            <ClientList />
           </div>
         </div>
         
@@ -114,7 +105,7 @@
           </button>
           <button 
             class="btn btn-primary" 
-            @click="archiveClient"
+            @click="archiveClientWithDrawerClose"
             :disabled="loading"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -129,352 +120,97 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { onMounted } from 'vue'
 import DrawerLayout from '@/components/layout/DrawerLayout.vue'
 import ClientList from '@/components/clients/ClientList.vue'
 import ClientDetail from '@/components/clients/ClientDetail.vue'
 import ClientEdit from '@/components/clients/ClientEdit.vue'
 import ViewHeader from '@/components/ViewHeader.vue'
 import RightDrawer from '@/components/RightDrawer.vue'
-import { getApiClient } from '@/config/api-config'
-import { appConfig, MOCK_CLIENT_DATA } from '@/config/app-config'
-import type { Client } from '@agile-exec/api-client'
+import { useClients } from '@/composables/useClients'
 
-// Get API client instance using environment configuration
-const apiClient = getApiClient()
-
-// State
-const searchQuery = ref('')
-const selectedStatus = ref<'all' | 'waiting' | 'active' | 'archived'>('active')
-const isDrawerOpen = ref(false)
-const selectedClient = ref<Client | null>(null)
-const drawerPinned = ref(false)
-const isEditMode = ref(false)
-const clients = ref<Client[]>([])
-const loading = ref(false)
-const error = ref<string | null>(null)
-const showDeleteConfirmModal = ref(false)
-const clientToDelete = ref<Client | null>(null)
-
-// Computed drawer title that updates based on selected client and edit mode
-const drawerTitle = computed(() => {
-  if (!selectedClient.value) {
-    return isEditMode.value ? 'New Client' : 'Client Details'
-  }
+// Use the clients composable for drawer management and client operations
+const {
+  // ========== REACTIVE DATA STORE ==========
+  currentClient: selectedClient, // Current client for drawer
   
-  const firstName = selectedClient.value.first_name || ''
-  const lastName = selectedClient.value.last_name || ''
+  // ========== UI STATE ==========
+  isLoading: loading,
+  error,
+  isDrawerOpen,
+  drawerPinned,
+  isEditMode,
+  showDeleteConfirmModal,
+  clientToDelete,
   
-  if (!firstName && !lastName) {
-    return isEditMode.value ? 'New Client' : 'Client Details'
-  }
+  // ========== COMPUTED PROPERTIES ==========
+  fullClientName,
+  drawerTitle,
   
-  return `${firstName} ${lastName}`.trim()
-})
+  // ========== CORE METHODS ==========
+  ensureInitialized,
+  saveClient,
+  archiveClient,
+  deleteClient,
+  
+  // ========== UI EVENT HANDLERS ==========
+  handleAddClient,
+  closeClientDetails,
+  handleNameChange,
+  editClient,
+  cancelEdit,
+  showDeleteModal,
+  closeDeleteModal
+} = useClients()
 
 // Load clients when component mounts
 onMounted(async () => {
-  await fetchClients()
+  await ensureInitialized()
 })
 
-// API methods
-const fetchClients = async () => {
-  loading.value = true
-  error.value = null
-  
-  try {
-    // Use mock data if MOCK_API is enabled
-    if (appConfig.MOCK_API) {
-      console.log('Using mock client data (MOCK_API enabled)')
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300))
-      clients.value = MOCK_CLIENT_DATA.clients as Client[]
-      return
-    }
+// Additional UI handlers not in composable
 
-    // Use real API
-    console.log('🚀 ClientsView - Calling apiClient.getClients...')
-    const response = await apiClient.getClients({ page: 1, limit: 500 })
-    console.log('📦 ClientsView - Response received:', response)
-    console.log('📦 ClientsView - Response.success:', response.success)
-    console.log('📦 ClientsView - Response.data:', response.data)
-    console.log('📦 ClientsView - Response.data is array:', Array.isArray(response.data))
-    
-    if (response.success && response.data) {
-      if (Array.isArray(response.data)) {
-        console.log('✅ ClientsView - Clients array received:', response.data.length, 'clients')
-        clients.value = response.data
-      } else if (response.data.clients && Array.isArray(response.data.clients)) {
-        console.log('✅ ClientsView - Clients nested array received:', response.data.clients.length, 'clients')
-        clients.value = response.data.clients
-      } else {
-        console.error('❌ ClientsView - Unexpected response structure:', response.data)
-        throw new Error('Invalid response format: expected clients array')
-      }
-    } else {
-      throw new Error(response.error || 'Failed to fetch clients')
-    }
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to fetch clients'
-    console.error('Failed to fetch clients:', err)
-    
-    // Fallback to mock data on API error if not already using mock
-    if (!appConfig.MOCK_API) {
-      console.log('API failed, falling back to mock data')
-      clients.value = MOCK_CLIENT_DATA.clients as Client[]
-    }
-  } finally {
-    loading.value = false
-  }
-}
-
-const deleteClientApi = async (id: number) => {
-  loading.value = true
-  try {
-    // Use mock behavior if MOCK_API is enabled
-    if (appConfig.MOCK_API) {
-      console.log(`Mock delete client with id: ${id}`)
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 200))
-      clients.value = clients.value.filter((c: Client) => c.id !== id)
-      return
-    }
-
-    // Use real API
-    const response = await apiClient.deleteClient(id)
-    if (response.success) {
-      clients.value = clients.value.filter((c: Client) => c.id !== id)
-    } else {
-      throw new Error(response.error || 'Failed to delete client')
-    }
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to delete client'
-    throw err
-  } finally {
-    loading.value = false
-  }
-}
-
-const saveClient = async (clientData?: Partial<Client>) => {
-  // Use the form data passed from ClientEdit, or fall back to selectedClient
-  const dataToSave = clientData || selectedClient.value
-  if (!dataToSave) return
-  console.log('saveClient', dataToSave)
-  try {
-    const id = (dataToSave.hasOwnProperty('id') && dataToSave.id ? dataToSave.id : 0)
-    if (appConfig.MOCK_API) {
-      // In mock mode, just update the client in the list
-      if (id === 0) {
-        // Creating new client - add to the list with a temporary ID
-        const newClient = { ...dataToSave, id: Date.now() } as Client
-        clients.value.unshift(newClient)
-        selectedClient.value = newClient
-      } else {
-        // Updating existing client
-        const index = clients.value.findIndex((c: Client) => c.id === id)
-        if (index !== -1) {
-          clients.value[index] = { ...clients.value[index], ...dataToSave } as Client
-          selectedClient.value = clients.value[index]
-        }
-      }
-    } else {
-      // Use real API to update client status
-      var response
-      if (id === 0) {
-        response = await apiClient.createClient({
-          ...dataToSave
-        })
-      } else {
-        response = await apiClient.updateClient(id, {
-          ...dataToSave
-        })
-      }
-      if (response.success && response.data) {
-        if (id === 0) {
-          // Creating new client - add to the list
-          clients.value.unshift(response.data)
-          selectedClient.value = response.data
-        } else {
-          // Update existing client in the list
-          const index = clients.value.findIndex((c: Client) => c.id === id)
-          if (index !== -1) {
-            clients.value[index] = response.data
-            // Update selected client if it's the same one
-            if (selectedClient.value?.id === response.data.id) {
-              selectedClient.value = response.data
-            }
-          }
-        }
-      } else {
-        throw new Error(response.error || 'Failed to save client')
-      }
-    }
-    isEditMode.value = false
-  } catch (error) {
-    console.error('Failed to update client:', error)
-  }
-}
-
-const archiveClient = async () => {
+const permanentlyDeleteClient = async () => {
   if (!clientToDelete.value?.id) return
   
-  loading.value = true
+  const clientToRemove = clientToDelete.value
+  
   try {
-    if (appConfig.MOCK_API) {
-      // In mock mode, update the client status to archived
-      const index = clients.value.findIndex((c: Client) => c.id === clientToDelete.value!.id)
-      if (index !== -1) {
-        clients.value[index] = { ...clients.value[index], status: 'archived' }
-        // Update selected client if it's the same one
-        if (selectedClient.value?.id === clientToDelete.value.id) {
-          selectedClient.value = clients.value[index]
-        }
-      }
-    } else {
-      // Use real API to update client status
-      const response = await apiClient.updateClient(clientToDelete.value.id, {
-        ...clientToDelete.value,
-        status: 'archived'
-      })
-      if (response.success && response.data) {
-        // Update the client in the list
-        const index = clients.value.findIndex((c: Client) => c.id === clientToDelete.value!.id)
-        if (index !== -1) {
-          clients.value[index] = response.data
-          // Update selected client if it's the same one
-          if (selectedClient.value?.id === clientToDelete.value.id) {
-            selectedClient.value = response.data
-          }
-        }
-      } else {
-        throw new Error(response.error || 'Failed to archive client')
-      }
+    const result = await deleteClient(clientToRemove)
+    if (result && !result.success) {
+      alert(result.error || 'Failed to delete client.')
+      return
+    }
+    
+    // Drawer closing is handled in the store
+    closeDeleteModal()
+  } catch (error) {
+    console.error('Failed to delete client:', error)
+    alert('Failed to delete client. Please try again.')
+  }
+}
+
+const archiveClientWithDrawerClose = async () => {
+  if (!clientToDelete.value?.id) return
+  
+  const clientToArchive = clientToDelete.value
+  
+  try {
+    const result = await archiveClient(clientToArchive)
+    if (result && !result.success) {
+      alert(result.error || 'Failed to archive client.')
+      return
+    }
+    
+    // Close the drawer if the archived client was selected
+    if (selectedClient.value?.id === clientToArchive.id) {
+      closeClientDetails()
     }
     closeDeleteModal()
   } catch (error) {
     console.error('Failed to archive client:', error)
     alert('Failed to archive client. Please try again.')
-  } finally {
-    loading.value = false
   }
-}
-
-const permanentlyDeleteClient = async () => {
-  if (!clientToDelete.value?.id) return
-  
-  loading.value = true
-  try {
-    await deleteClientApi(clientToDelete.value.id)
-    // Close the drawer if the deleted client was selected
-    if (selectedClient.value?.id === clientToDelete.value.id) {
-      closeClientDetails()
-    }
-    closeDeleteModal()
-  } catch (error) {
-    console.error('Failed to delete client:', error)
-    alert('Failed to delete client. Please try again.')
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleClientDelete = async (client: Client) => {
-  console.log('Delete client:', client)
-  if (confirm(`Are you sure you want to delete ${client.first_name} ${client.last_name}?`)) {
-    try {
-      if (client.id) {
-        await deleteClientApi(client.id)
-        // Close the drawer if the deleted client was selected
-        if (selectedClient.value?.id === client.id) {
-          closeClientDetails()
-        }
-      }
-    } catch (error) {
-      console.error('Failed to delete client:', error)
-      alert('Failed to delete client. Please try again.')
-    }
-  }
-}
-
-// UI State Event handlers
-const handleAddClient = () => {
-  console.log('Add new client')
-  selectedClient.value = null
-  isDrawerOpen.value = true
-  isEditMode.value = true
-}
-
-const handleClientEdit = (client: Client) => {
-  console.log('Edit client:', client)
-  selectedClient.value = { ...client }
-  isDrawerOpen.value = true
-  isEditMode.value = true
-}
-
-const handleClientClick = (client: Client) => {
-  console.log('Client clicked:', client)
-  selectedClient.value = client
-  isDrawerOpen.value = true
-  isEditMode.value = false
-}
-
-const closeClientDetails = () => {
-  isDrawerOpen.value = false
-  selectedClient.value = null
-  isEditMode.value = false
-}
-
-const handleNameChange = (firstName: string, lastName: string) => {
-  if (selectedClient.value) {
-    selectedClient.value = {
-      ...selectedClient.value,
-      first_name: firstName,
-      last_name: lastName
-    }
-  } else if (isEditMode.value) {
-    // If we're creating a new client, create a temporary client object for the title
-    selectedClient.value = {
-      first_name: firstName,
-      last_name: lastName,
-      status: 'active'
-    } as Client
-  }
-}
-
-const editClient = () => {
-  isEditMode.value = true
-}
-
-const cancelEdit = () => {
-  // If we were creating a new client (no selectedClient or selectedClient has no id), close the drawer completely
-  if (!selectedClient.value || !selectedClient.value.id) {
-    closeClientDetails()
-  } else {
-    // If we were editing an existing client, just exit edit mode
-    isEditMode.value = false
-  }
-}
-
-// Modal functions
-const showDeleteModal = (client: Client) => {
-  clientToDelete.value = client
-  showDeleteConfirmModal.value = true
-}
-
-const closeDeleteModal = () => {
-  showDeleteConfirmModal.value = false
-  clientToDelete.value = null
-}
-
-
-const handleStatusFilter = (status: 'all' | 'waiting' | 'active' | 'archived') => {
-  selectedStatus.value = status
-  console.log('Status filter changed:', status)
-}
-
-const handleSearchChange = (query: string) => {
-  searchQuery.value = query
-  console.log('Search query changed:', query)
 }
 
 

@@ -26,6 +26,18 @@ export const extraRoutes = [
         name: 'Clients',
         component: () => import('../views/ClientsView.vue'),
         meta: { requiresAuth: true }
+    },
+    {
+        path: '/datetime-demo',
+        name: 'DateTimeDemo',
+        component: () => import('../components/DateTimeUtcDemo.vue'),
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/calendar-demo',
+        name: 'CalendarDemo',
+        component: () => import('../components/CalendarSimpleDemo.vue'),
+        meta: { requiresAuth: true }
     }
 
     // {

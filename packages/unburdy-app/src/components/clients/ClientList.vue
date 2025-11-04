@@ -2,30 +2,45 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { ChevronLeft, ChevronRight, Users, Plus, Search } from 'lucide-vue-next'
 import ViewCard from '../ViewCard.vue'
+import { useClients } from '@/composables/useClients'
 import type { Client } from '@agile-exec/api-client'
 
-const props = withDefaults(defineProps<{
-  clients?: Client[]
-  searchQuery?: string
-  selectedStatus?: 'all' | 'waiting' | 'active' | 'archived'
-}>(), {
-  clients: () => [],
-  searchQuery: '',
-  selectedStatus: 'active'
-})
+// Use the clients composable directly
+const {
+  // ========== REACTIVE DATA STORE ==========
+  allClients,
+  activeClients,
+  waitingClients,
+  archivedClients,
+  currentList,
+  currentClient,
+  
+  // ========== UI STATE ==========
+  isLoading,
+  error,
+  searchQuery,
+  currentListSelection,
+  
+  // ========== CORE METHODS ==========
+  ensureInitialized,
+  
+  // ========== UI EVENT HANDLERS ==========
+  handleAddClient,
+  handleClientEdit,
+  handleClientClick,
+  handleSearchChange,
+  handleStatusFilter,
+  showDeleteModal
+} = useClients()
 
-const emit = defineEmits<{
-  clientClick: [client: Client]
-  clientEdit: [client: Client]
-  clientDelete: [client: Client]
-  statusFilter: [status: 'all' | 'waiting' | 'active' | 'archived']
-  searchChange: [query: string]
-}>()
+// Initialize the composable data
+onMounted(async () => {
+  await ensureInitialized()
+})
 
 // Local state
 const selectedClients = ref<Set<number>>(new Set())
-const searchInput = ref(props.searchQuery)
-const statusFilter = ref(props.selectedStatus)
+const statusFilter = ref(currentListSelection.value)
 
 // Screen size detection
 const isMobile = ref(false)
@@ -72,24 +87,9 @@ const getStatusBadge = (status?: string) => {
   return badges[status || ''] || 'badge-ghost'
 }
 
-// Filtered clients based on search and status
+// Use the current list from composable (already filtered)
 const filteredClients = computed(() => {
-  if (!props.clients) return []
-  
-  let filtered = props.clients.filter(client => {
-    const query = props.searchQuery?.toLowerCase() || ''
-    const matchesSearch = !query || (
-      (client.first_name || '').toLowerCase().includes(query) ||
-      (client.last_name || '').toLowerCase().includes(query) ||
-      (client.email || '').toLowerCase().includes(query) ||
-      (client.phone || '').toLowerCase().includes(query)
-    )
-    const matchesStatus = !props.selectedStatus || props.selectedStatus === 'all' || (client.status || '') === props.selectedStatus
-    
-    return matchesSearch && matchesStatus
-  })
-  
-  return filtered
+  return currentList.value
 })
 
 // Calculate age from date of birth
@@ -125,38 +125,24 @@ const toggleAllClients = () => {
   }
 }
 
-// Event handlers
-const handleClientClick = (client: Client) => {
-  emit('clientClick', client)
-}
-
-const handleClientEdit = (client: Client) => {
-  emit('clientEdit', client)
-}
-
+// Local event handlers that call the composable methods
 const handleClientDelete = (client: Client) => {
-  emit('clientDelete', client)
-}
-
-const handleStatusFilter = (status: 'all' | 'waiting' | 'active' | 'archived') => {
-  statusFilter.value = status
-  emit('statusFilter', status)
+  showDeleteModal(client)
 }
 
 const handleDropdownChange = (event: Event) => {
   const target = event.target as HTMLSelectElement
   if (target) {
     handleStatusFilter(target.value as 'all' | 'waiting' | 'active' | 'archived')
+    statusFilter.value = currentListSelection.value
   }
 }
 
-const handleSearchChange = () => {
-  emit('searchChange', searchInput.value)
-}
+// Search input handler is no longer needed - v-model directly updates the reactive searchQuery
 
 const handleBulkDelete = () => {
   const selectedIds = Array.from(selectedClients.value)
-  const clientsToDelete = props.clients.filter(client => client.id && selectedIds.includes(client.id))
+  const clientsToDelete = currentList.value.filter(client => client.id && selectedIds.includes(client.id))
   
   if (clientsToDelete.length === 0) return
   
@@ -166,31 +152,23 @@ const handleBulkDelete = () => {
     : `Are you sure you want to delete ${clientsToDelete.length} clients: ${names}?`
   
   if (confirm(message)) {
-    // Emit delete events for each selected client
+    // Delete each selected client using composable
     clientsToDelete.forEach(client => {
-      emit('clientDelete', client)
+      showDeleteModal(client)
     })
     // Clear selection after deletion
     selectedClients.value.clear()
   }
 }
 
-// Client count by status
+// Client count by status using composable data
 const clientCounts = computed(() => {
-  const counts = {
-    all: props.clients.length,
-    waiting: 0,
-    active: 0,
-    archived: 0
+  return {
+    all: allClients.value.length,
+    waiting: waitingClients.value.length,
+    active: activeClients.value.length,
+    archived: archivedClients.value.length
   }
-  
-  props.clients.forEach(client => {
-    if (client.status && client.status in counts) {
-      (counts as any)[client.status]++
-    }
-  })
-  
-  return counts
 })
 
 // Format date to locale string
@@ -212,12 +190,11 @@ const dynamicTitle = computed(() => {
   }
   
   const statusTitles = {
-    all: 'Clients',
-    waiting: 'Waiting List', 
     active: 'Active Clients',
+    waiting: 'Waiting List', 
     archived: 'Archived Clients'
   }
-  const baseTitle = statusTitles[props.selectedStatus] || 'Clients'
+  const baseTitle = statusTitles[currentListSelection.value] || 'Clients'
   return `${baseTitle} (${filteredClients.value.length})`
 })
 
@@ -228,11 +205,6 @@ const statusOptions = computed(() => [
   { value: 'archived', label: 'Archived', count: clientCounts.value.archived }
 ])
 
-// Current status label for dropdown display
-const currentStatusLabel = computed(() => {
-  const option = statusOptions.value.find(opt => opt.value === statusFilter.value)
-  return option ? `${option.label} (${option.count})` : 'Active'
-})
 </script>
 
 <template>
@@ -260,21 +232,21 @@ const currentStatusLabel = computed(() => {
         <div class="hidden lg:flex btn-group">
           <button 
             class="btn btn-sm"
-            :class="{ 'btn-active': statusFilter === 'active' }"
+            :class="{ 'btn-active': currentListSelection === 'active' }"
             @click="handleStatusFilter('active')"
           >
             Active ({{ clientCounts.active }})
           </button>
           <button 
             class="btn btn-sm" 
-            :class="{ 'btn-active': statusFilter === 'waiting' }"
+            :class="{ 'btn-active': currentListSelection === 'waiting' }"
             @click="handleStatusFilter('waiting')"
           >
             Waiting ({{ clientCounts.waiting }})
           </button>
           <button 
             class="btn btn-sm"
-            :class="{ 'btn-active': statusFilter === 'archived' }"
+            :class="{ 'btn-active': currentListSelection === 'archived' }"
             @click="handleStatusFilter('archived')"
           >
             Archived ({{ clientCounts.archived }})
@@ -283,11 +255,10 @@ const currentStatusLabel = computed(() => {
         
         <!-- Search -->
         <input 
-          v-model="searchInput"
+          v-model="searchQuery"
           type="text" 
           placeholder="Search clients..." 
           class="input input-sm lg:input-md input-bordered w-full lg:w-64"
-          @input="handleSearchChange"
         />
       </div>
     </template>
@@ -414,7 +385,7 @@ const currentStatusLabel = computed(() => {
                   <div>
                     <div class="font-medium">No clients found</div>
                     <div class="text-sm">
-                      {{ searchInput ? 'Try adjusting your search' : 'Add your first client to get started' }}
+                      {{ searchQuery ? 'Try adjusting your search' : 'Add your first client to get started' }}
                     </div>
                   </div>
                 </div>
