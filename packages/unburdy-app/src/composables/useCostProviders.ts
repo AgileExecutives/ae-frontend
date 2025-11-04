@@ -109,15 +109,27 @@ export const useCostProviders = () => {
         // Direct API response format: { cost_providers: [...], pagination: {...} }
         providersArray = response.cost_providers
         console.log('💰 Using direct cost_providers array from API response:', providersArray.length, 'providers')
-      } else if (response.success && response.data) {
-        // Wrapped response format: { success: true, data: { cost_providers: [...] } }
+      } else if (response && response.success && response.data) {
+        // Wrapped response format: { success: true, data: [...] } or { success: true, data: { cost_providers: [...] } }
+        console.log('💰 Processing wrapped response, data:', response.data)
         if (Array.isArray(response.data)) {
           providersArray = response.data
+          console.log('💰 Using wrapped data array directly:', providersArray.length, 'providers')
         } else if (response.data.cost_providers && Array.isArray(response.data.cost_providers)) {
           providersArray = response.data.cost_providers
+          console.log('💰 Using wrapped data.cost_providers array:', providersArray.length, 'providers')
         } else {
-          console.error('💰 Unexpected wrapped response structure:', response.data)
-          throw new Error('Invalid response format: expected cost providers array')
+          console.warn('💰 Unexpected wrapped response structure, using fallback:', response.data)
+          // Try to extract any array from the data object
+          const dataValues = Object.values(response.data)
+          const arrayValue = dataValues.find(val => Array.isArray(val))
+          if (arrayValue && Array.isArray(arrayValue)) {
+            providersArray = arrayValue
+            console.log('💰 Found array in response data:', providersArray.length, 'providers')
+          } else {
+            console.error('💰 No valid array found in wrapped response:', response.data)
+            throw new Error('Invalid response format: expected cost providers array')
+          }
         }
       } else if (Array.isArray(response)) {
         // Handle direct array response
@@ -191,7 +203,8 @@ export const useCostProviders = () => {
             data: response.data
           }
         } else {
-          throw new Error(response.error || 'Failed to create cost provider')
+          const errorMessage = response?.message || response?.error || 'Failed to create cost provider'
+          throw new Error(errorMessage)
         }
       }
     } catch (err) {
@@ -261,7 +274,8 @@ export const useCostProviders = () => {
             data: response.data
           }
         } else {
-          throw new Error(response.error || 'Failed to update cost provider')
+          const errorMessage = response?.message || response?.error || 'Failed to update cost provider'
+          throw new Error(errorMessage)
         }
       }
     } catch (err) {
@@ -291,10 +305,11 @@ export const useCostProviders = () => {
       } else {
         // Use real API
         const response = await apiClient.deleteCostProvider(id)
-        if (response.success) {
+        if (response && response.success) {
           costProviders.value = costProviders.value.filter(p => p.id !== id)
         } else {
-          throw new Error('Failed to delete cost provider')
+          const errorMessage = response?.message || 'Failed to delete cost provider'
+          throw new Error(errorMessage)
         }
       }
       

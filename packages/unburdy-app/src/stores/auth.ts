@@ -84,11 +84,13 @@ export const useAuthStore = defineStore('auth', () => {
       const apiClient = getApiClient()
       const response = await apiClient.login(credentials)
 
-      if (response && response.data && response.data.token && response.data.user) {
+      // Handle wrapped API response
+      if (response && response.success && response.data && response.data.token && response.data.user) {
         setToken(response.data.token)
         setUser(response.data.user as User)
       } else {
-        throw new Error('Invalid response from server')
+        const errorMessage = response?.message || 'Invalid response from server'
+        throw new Error(errorMessage)
       }
     } catch (err: any) {
       console.error('Login failed:', err)

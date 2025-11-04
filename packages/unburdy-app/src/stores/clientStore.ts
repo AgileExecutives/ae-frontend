@@ -297,7 +297,8 @@ const saveClient = async (clientData?: Partial<Client>) => {
         response = await apiClient.updateClient(id, cleanData)
       }
       
-      if (response.success && response.data) {
+      // Handle wrapped API response
+      if (response && response.success && response.data) {
         if (id === 0) {
           // Creating new client - add to store
           addClientToStore(response.data)
@@ -307,7 +308,8 @@ const saveClient = async (clientData?: Partial<Client>) => {
           updateClientInStore(response.data)
         }
       } else {
-        throw new Error(response.error || 'Failed to save client')
+        const errorMessage = response?.message || response?.error || 'Failed to save client'
+        throw new Error(errorMessage)
       }
     }
     
@@ -360,10 +362,12 @@ const archiveClient = async (client?: Client) => {
         status: 'archived'
       })
       
-      if (response.success && response.data) {
+      // Handle wrapped API response
+      if (response && response.success && response.data) {
         updateClientInStore(response.data)
       } else {
-        throw new Error(response.error || 'Failed to archive client')
+        const errorMessage = response?.message || response?.error || 'Failed to archive client'
+        throw new Error(errorMessage)
       }
     }
     
@@ -417,10 +421,13 @@ const deleteClient = async (client?: Client) => {
     } else {
       // Use real API
       const response = await apiClient.deleteClient(clientToRemove.id)
-      if (response.success) {
+      
+      // Handle wrapped API response
+      if (response && response.success) {
         removeClientFromStore(clientToRemove.id)
       } else {
-        throw new Error('Failed to delete client')
+        const errorMessage = response?.message || 'Failed to delete client'
+        throw new Error(errorMessage)
       }
     }
     
@@ -544,18 +551,18 @@ const fullClientName = computed(() => {
 
 // ========== UTILITY FUNCTIONS ==========
 const getClientById = (id: number): Client | undefined => {
-  return clientStore.value.find(client => client.id === id)
+  return clientStore.value.find((client: Client) => client.id === id)
 }
 
 const getClientsByStatus = (status: Client['status']): Client[] => {
-  return clientStore.value.filter(client => client.status === status)
+  return clientStore.value.filter((client: Client) => client.status === status)
 }
 
 const searchClients = (query: string): Client[] => {
   if (!query.trim()) return clientStore.value
   
   const searchTerm = query.toLowerCase().trim()
-  return clientStore.value.filter(client => {
+  return clientStore.value.filter((client: Client) => {
     const firstName = (client.first_name || '').toLowerCase()
     const lastName = (client.last_name || '').toLowerCase()
     const email = (client.email || '').toLowerCase()
