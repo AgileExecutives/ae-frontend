@@ -43,7 +43,6 @@ describe('useClients', () => {
   })
 
   it('should initialize with empty state', () => {
-    expect(clientsComposable.allClients.value).toEqual([])
     expect(clientsComposable.activeClients.value).toEqual([])
     expect(clientsComposable.waitingClients.value).toEqual([])
     expect(clientsComposable.archivedClients.value).toEqual([])

@@ -270,62 +270,9 @@ const processedMeetings = computed(() => {
   return allProcessed
 })
 
-// Use props meetings directly, with optional test data for demonstration
+// Use props meetings directly
 const displayMeetings = computed(() => {
-  const baseMeetings = props.meetings
-  
-  // Add test events if no meetings are present (for demonstration)
-  if (baseMeetings.length === 0) {
-    const today = new Date()
-    const tomorrow = new Date(today)
-    tomorrow.setDate(today.getDate() + 1)
-    
-    return [{
-      id: 'test-holiday',
-      title: 'New Year\'s Day',
-      startTime: '00:00',
-      endTime: '23:59',
-      classification: 'error' as const,
-      type: 'public_holiday',
-      date: today.toISOString().split('T')[0],
-      isAllDay: true,
-      description: 'Public Holiday - New Year\'s Day'
-    }, {
-      id: 'test-school-holiday',
-      title: 'Spring Break',
-      startTime: '00:00',
-      endTime: '23:59',
-      classification: 'school_holiday' as const,
-      type: 'school_holiday',
-      date: tomorrow.toISOString().split('T')[0],
-      endDate: new Date(tomorrow.getTime() + 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 5-day break
-      isAllDay: true,
-      isMultiDay: true,
-      description: 'School Holiday - Spring Break (Multi-day)'
-    }, {
-      id: 'test-allday',
-      title: 'All-Day Event Test',
-      startTime: '00:00',
-      endTime: '23:59',
-      classification: 'primary' as const,
-      type: 'test',
-      date: new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      isAllDay: true,
-      description: 'This is a test all-day event'
-    }, {
-      id: 'test-timed',
-      title: 'Regular Meeting',
-      startTime: '09:00',
-      endTime: '10:00',
-      classification: 'success' as const,
-      type: 'meeting',
-      date: today.toISOString().split('T')[0],
-      isAllDay: false,
-      description: 'This is a regular timed meeting'
-    }]
-  }
-  
-  return baseMeetings
+  return props.meetings
 })
 
 // Separate all-day events from regular timed events
@@ -371,7 +318,6 @@ const allDayEventsByDay = computed(() => {
 // Handle time slot click
 const handleTimeSlotClick = (time: string, dateStr?: string) => {
   emit('timeSlotClick', time)
-  console.log('Time slot clicked:', time, 'on date:', dateStr)
 }
 
 // Handle meeting click
@@ -448,7 +394,6 @@ const getFirstAllDayEvent = (dateStr: string): Meeting | undefined => {
 const getMeetingClasses = (classification: string, eventType?: string, isAllDay?: boolean) => {
   // Special handling for public holidays - always red
   if (eventType === 'public_holiday' || eventType === 'holiday' || eventType === 'feiertag') {
-    console.log('🎄 Public holiday detected, applying red styling:', eventType)
     return 'bg-red-500 text-white border-red-600'
   }
   
@@ -469,11 +414,6 @@ const getMeetingClasses = (classification: string, eventType?: string, isAllDay?
   
   const classes = colorMap[validClassification as keyof typeof colorMap] || colorMap.primary
   
-  // Debug logging for school holidays
-  if (validClassification === 'school_holiday' || eventType === 'school_holiday') {
-    console.log('🏫 Week view - Regular meeting school holiday:', { classification: validClassification, eventType, classes })
-  }
-  
   return classes
 }
 
@@ -481,13 +421,11 @@ const getMeetingClasses = (classification: string, eventType?: string, isAllDay?
 const getAllDayClasses = (classification: string, eventType?: string) => {
   // Special handling for public holidays - always red
   if (eventType === 'public_holiday') {
-    console.log('🎄 Public holiday detected, applying red styling:', eventType)
     return 'bg-red-500/90 text-white border-red-600/50'
   }
   
   // Also check for holiday keyword variations
   if (eventType === 'holiday' || eventType === 'feiertag') {
-    console.log('🎄 Holiday detected, applying red styling:', eventType)
     return 'bg-red-500/90 text-white border-red-600/50'
   }
   
@@ -507,11 +445,6 @@ const getAllDayClasses = (classification: string, eventType?: string) => {
   }
   
   const classes = colorMap[validClassification as keyof typeof colorMap] || colorMap.primary
-  
-  // Debug logging for school holidays
-  if (validClassification === 'school_holiday' || eventType === 'school_holiday') {
-    console.log('🏫 Week view - All-day school holiday:', { classification: validClassification, eventType, classes })
-  }
   
   return classes
 }
