@@ -299,19 +299,16 @@ const handleDuplicate = (meeting: Meeting) => {
 }
 
 const saveMeeting = async (meeting: Meeting) => {
-  // TODO: Get the actual calendar ID from the store or API
-  const calendarId = 1 // This should come from your calendar data
-  
   try {
     if (meeting.id && selectedMeeting.value?.id) {
       // Update existing meeting
-      const result = await updateCalendarEntry(meeting, calendarId)
+      const result = await updateCalendarEntry(meeting)
       if (result.success) {
         closeMeetingDetails()
       }
     } else {
       // Create new meeting
-      const result = await createCalendarEntry(meeting, calendarId)
+      const result = await createCalendarEntry(meeting)
       if (result.success) {
         closeMeetingDetails()
       }

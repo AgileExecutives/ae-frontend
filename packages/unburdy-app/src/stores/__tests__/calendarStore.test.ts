@@ -54,15 +54,20 @@ describe('calendarStore', () => {
       const mockEvents: CalendarEvent[] = [
         {
           id: 1,
+          tenant_id: 1,
+          user_id: 1,
           calendar_id: 1,
           title: 'Test Event',
-          date_from: '2025-11-04',
-          date_to: '2025-11-04',
-          time_from: '09:00',
-          time_to: '10:00',
+          start_time: '2025-11-04T09:00:00+01:00',
+          end_time: '2025-11-04T10:00:00+01:00',
           type: 'appointment',
           description: 'Test description',
           is_all_day: false,
+          is_exception: false,
+          participants: [],
+          timezone: 'Europe/Berlin',
+          created_at: '2025-11-04T08:00:00+01:00',
+          updated_at: '2025-11-04T08:00:00+01:00',
         },
       ]
 
@@ -74,10 +79,10 @@ describe('calendarStore', () => {
     it('should replace existing events', () => {
       const store = useCalendarStore()
       const firstEvents: CalendarEvent[] = [
-        { id: 1, calendar_id: 1, title: 'First', date_from: '2025-11-04', date_to: '2025-11-04', time_from: '09:00', time_to: '10:00', type: 'appointment', is_all_day: false },
+        { id: 1, tenant_id: 1, user_id: 1, calendar_id: 1, title: 'First', start_time: '2025-11-04T09:00:00+01:00', end_time: '2025-11-04T10:00:00+01:00', type: 'appointment', is_all_day: false, is_exception: false, participants: [], timezone: 'Europe/Berlin', created_at: '', updated_at: '' },
       ]
       const secondEvents: CalendarEvent[] = [
-        { id: 2, calendar_id: 1, title: 'Second', date_from: '2025-11-05', date_to: '2025-11-05', time_from: '14:00', time_to: '15:00', type: 'meeting', is_all_day: false },
+        { id: 2, tenant_id: 1, user_id: 1, calendar_id: 1, title: 'Second', start_time: '2025-11-05T14:00:00+01:00', end_time: '2025-11-05T15:00:00+01:00', type: 'meeting', is_all_day: false, is_exception: false, participants: [], timezone: 'Europe/Berlin', created_at: '', updated_at: '' },
       ]
 
       store.setEvents(firstEvents)
@@ -93,12 +98,21 @@ describe('calendarStore', () => {
       const store = useCalendarStore()
       const mockSeries: CalendarSeries[] = [
         {
-          id: '1',
+          id: 1,
+          tenant_id: 1,
+          user_id: 1,
+          calendar_id: 1,
           title: 'Weekly Meeting',
-          recurrence_rule: 'RRULE:FREQ=WEEKLY;BYDAY=MO',
-          start_date: '2025-11-04',
-          end_date: '2025-12-31',
-          events: [],
+          participants: [],
+          weekday: 1,
+          interval: 1,
+          start_time: '2025-11-04T09:00:00+01:00',
+          end_time: '2025-11-04T10:00:00+01:00',
+          timezone: 'Europe/Berlin',
+          entry_uuid: 'test-uuid',
+          sequence: 0,
+          created_at: '2025-11-04T08:00:00+01:00',
+          updated_at: '2025-11-04T08:00:00+01:00',
         },
       ]
 
@@ -177,10 +191,10 @@ describe('calendarStore', () => {
       
       // Modify all state
       store.setEvents([
-        { id: 1, calendar_id: 1, title: 'Test', date_from: '2025-11-04', date_to: '2025-11-04', time_from: '09:00', time_to: '10:00', type: 'appointment', is_all_day: false },
+        { id: 1, tenant_id: 1, user_id: 1, calendar_id: 1, title: 'Test', start_time: '2025-11-04T09:00:00+01:00', end_time: '2025-11-04T10:00:00+01:00', type: 'appointment', is_all_day: false, is_exception: false, participants: [], timezone: 'Europe/Berlin', created_at: '', updated_at: '' },
       ])
       store.setSeries([
-        { id: '1', title: 'Series', recurrence_rule: 'WEEKLY', start_date: '2025-11-04', end_date: '2025-12-31', events: [] },
+        { id: 1, tenant_id: 1, user_id: 1, calendar_id: 1, title: 'Series', participants: [], weekday: 1, interval: 1, start_time: '2025-11-04T09:00:00+01:00', end_time: '2025-11-04T10:00:00+01:00', timezone: 'Europe/Berlin', entry_uuid: 'test', sequence: 0, created_at: '', updated_at: '' },
       ])
       store.setCurrentDate(new Date('2025-12-25'))
       store.setIsLoading(true)

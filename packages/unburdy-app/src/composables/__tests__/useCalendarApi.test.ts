@@ -29,6 +29,13 @@ vi.mock('../useDateTimeUtc', () => ({
       const [date, time] = utcString.split('T')
       return { date, time: time?.split(':').slice(0, 2).join(':') || '00:00' }
     }),
+    timezoneInfo: {
+      value: {
+        name: 'UTC',
+        offset: '+00:00',
+        abbreviation: 'UTC'
+      }
+    }
   }),
 }))
 
@@ -139,14 +146,19 @@ describe('useCalendarApi', () => {
 
       const mockCreatedEvent: CalendarEvent = {
         id: 1,
+        tenant_id: 1,
+        user_id: 1,
         calendar_id: 1,
         title: 'New Meeting',
-        date_from: '2025-11-04T09:00:00Z',
-        date_to: '2025-11-04T10:00:00Z',
-        time_from: '2025-11-04T09:00:00Z',
-        time_to: '2025-11-04T10:00:00Z',
+        start_time: '2025-11-04T09:00:00Z',
+        end_time: '2025-11-04T10:00:00Z',
         type: 'meeting',
         is_all_day: false,
+        is_exception: false,
+        participants: [],
+        timezone: 'UTC',
+        created_at: '',
+        updated_at: '',
       }
 
       mockCreateCalendarEntry.mockResolvedValue({
@@ -168,7 +180,12 @@ describe('useCalendarApi', () => {
       })
 
       const calendarApi = useCalendarApi()
-      const result = await calendarApi.createCalendarEntry(meeting, 1)
+      
+      // Set calendar ID in store (simulating a successful fetchCalendarData)
+      const store = useCalendarStore()
+      store.calendarId = 1
+      
+      const result = await calendarApi.createCalendarEntry(meeting)
 
       expect(result.success).toBe(true)
       expect(mockCreateCalendarEntry).toHaveBeenCalled()
@@ -193,8 +210,12 @@ describe('useCalendarApi', () => {
       })
 
       const calendarApi = useCalendarApi()
-      const result = await calendarApi.createCalendarEntry(meeting, 1)
+      
+      // Set calendar ID in store
       const store = useCalendarStore()
+      store.calendarId = 1
+      
+      const result = await calendarApi.createCalendarEntry(meeting)
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Validation error')
@@ -225,7 +246,12 @@ describe('useCalendarApi', () => {
       })
 
       const calendarApi = useCalendarApi()
-      await calendarApi.createCalendarEntry(meeting, 1)
+      
+      // Set calendar ID in store
+      const store = useCalendarStore()
+      store.calendarId = 1
+      
+      await calendarApi.createCalendarEntry(meeting)
 
       expect(mockCreateCalendarEntry).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -260,7 +286,12 @@ describe('useCalendarApi', () => {
       })
 
       const calendarApi = useCalendarApi()
-      const result = await calendarApi.updateCalendarEntry(meeting, 1)
+      
+      // Set calendar ID in store
+      const store = useCalendarStore()
+      store.calendarId = 1
+      
+      const result = await calendarApi.updateCalendarEntry(meeting)
 
       expect(result.success).toBe(true)
       expect(mockUpdateCalendarEntry).toHaveBeenCalledWith(1, expect.any(Object))
@@ -280,7 +311,12 @@ describe('useCalendarApi', () => {
       }
 
       const calendarApi = useCalendarApi()
-      const result = await calendarApi.updateCalendarEntry(meeting, 1)
+      
+      // Set calendar ID in store
+      const store = useCalendarStore()
+      store.calendarId = 1
+      
+      const result = await calendarApi.updateCalendarEntry(meeting)
 
       expect(result.success).toBe(false)
       expect(result.error).toContain('Invalid event ID')
@@ -304,8 +340,12 @@ describe('useCalendarApi', () => {
       })
 
       const calendarApi = useCalendarApi()
-      const result = await calendarApi.updateCalendarEntry(meeting, 1)
+      
+      // Set calendar ID in store
       const store = useCalendarStore()
+      store.calendarId = 1
+      
+      const result = await calendarApi.updateCalendarEntry(meeting)
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Update failed')
@@ -378,13 +418,18 @@ describe('useCalendarApi', () => {
       })
 
       const calendarApi = useCalendarApi()
-      await calendarApi.createCalendarEntry(meeting, 1)
+      
+      // Set calendar ID in store
+      const store = useCalendarStore()
+      store.calendarId = 1
+      
+      await calendarApi.createCalendarEntry(meeting)
 
       // Verify that the conversion function was called
       expect(mockCreateCalendarEntry).toHaveBeenCalledWith(
         expect.objectContaining({
-          date_from: expect.stringContaining('2025-11-04'),
-          date_to: expect.stringContaining('2025-11-04'),
+          start_time: expect.stringContaining('2025-11-04'),
+          end_time: expect.stringContaining('2025-11-04'),
         })
       )
     })
@@ -413,12 +458,17 @@ describe('useCalendarApi', () => {
       })
 
       const calendarApi = useCalendarApi()
-      await calendarApi.createCalendarEntry(meeting, 1)
+      
+      // Set calendar ID in store
+      const store = useCalendarStore()
+      store.calendarId = 1
+      
+      await calendarApi.createCalendarEntry(meeting)
 
       expect(mockCreateCalendarEntry).toHaveBeenCalledWith(
         expect.objectContaining({
-          date_from: expect.stringContaining('2025-11-04'),
-          date_to: expect.stringContaining('2025-11-06'),
+          start_time: expect.stringContaining('2025-11-04'),
+          end_time: expect.stringContaining('2025-11-06'),
         })
       )
     })

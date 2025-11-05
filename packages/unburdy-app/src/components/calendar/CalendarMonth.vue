@@ -79,9 +79,20 @@ const calendarDays = computed(() => {
     const date = new Date(start)
     date.setDate(start.getDate() + i)
     
-    const dateStr = date.toISOString().split('T')[0]
+    // Use local date string (YYYY-MM-DD) instead of UTC to avoid timezone shifts
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const dateStr = `${year}-${month}-${day}`
+    
     const isCurrentMonth = date.getMonth() === props.date.getMonth()
-    const isToday = dateStr === new Date().toISOString().split('T')[0]
+    
+    const today = new Date()
+    const todayYear = today.getFullYear()
+    const todayMonth = String(today.getMonth() + 1).padStart(2, '0')
+    const todayDay = String(today.getDate()).padStart(2, '0')
+    const todayStr = `${todayYear}-${todayMonth}-${todayDay}`
+    const isToday = dateStr === todayStr
     
     // Get meetings for this day
     const dayMeetings = props.meetings.filter(meeting => {

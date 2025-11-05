@@ -11,6 +11,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   const error = ref<string | null>(null)
   const calendarName = ref<string>('Calendar')
   const calendarColor = ref<string>('primary')
+  const calendarId = ref<number | null>(null)
 
   // --- Getters ---
   const getEvents = computed(() => events.value)
@@ -20,6 +21,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   const getError = computed(() => error.value)
   const getCalendarName = computed(() => calendarName.value)
   const getCalendarColor = computed(() => calendarColor.value)
+  const getCalendarId = computed(() => calendarId.value)
 
   // --- Actions ---
   function setEvents(newEventList: CalendarEvent[]) {
@@ -42,9 +44,12 @@ export const useCalendarStore = defineStore('calendar', () => {
     error.value = errorMessage
   }
 
-  function setCalendarInfo(name: string, color: string) {
+  function setCalendarInfo(name: string, color: string, id?: number) {
     calendarName.value = name
     calendarColor.value = color
+    if (id !== undefined) {
+      calendarId.value = id
+    }
   }
 
   function reset() {
@@ -55,6 +60,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     error.value = null
     calendarName.value = 'Calendar'
     calendarColor.value = 'primary'
+    calendarId.value = null
   }
 
   return {
@@ -66,6 +72,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     error,
     calendarName,
     calendarColor,
+    calendarId,
 
     // Getters
     getEvents,
@@ -75,6 +82,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     getError,
     getCalendarName,
     getCalendarColor,
+    getCalendarId,
 
     // Actions
     setEvents,

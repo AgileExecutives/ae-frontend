@@ -1,11 +1,13 @@
 import { computed, ref } from 'vue'
 import { useCalendarStore } from '@/stores/calendarStore'
 import { useCalendarApi } from '@/composables/useCalendarApi'
+import { useDateTimeUtc } from '@/composables/useDateTimeUtc'
 import type { CalendarEvent, Meeting } from '@/types/calendar'
 
 export function useCalendar() {
   const store = useCalendarStore()
   const { fetchCalendarData } = useCalendarApi()
+  const dateTime = useDateTimeUtc()
 
   // Caching logic
   const cache = ref({
@@ -33,20 +35,28 @@ export function useCalendar() {
     }
   }
 
-  // Event conversion logic
+  // Event conversion logic using useDateTimeUtc
   const convertApiEventToMeeting = (event: CalendarEvent): Meeting => {
-    const eventId = event.id?.toString() || ''
+    const eventId = event.id.toString()
     const eventTitle = event.title || 'Untitled Event'
-    const eventDateFrom = event.date_from || new Date().toISOString().split('T')[0]
-    const eventTimeFrom = event.time_from || '09:00'
-    const eventTimeTo = event.time_to || '10:00'
-    const eventType = event.type || 'appointment'
-
-    const date = eventDateFrom.split('T')[0]
-    const timeFromMatch = eventTimeFrom.match(/T(\d{2}):(\d{2})/)
-    const timeToMatch = eventTimeTo.match(/T(\d{2}):(\d{2})/)
-    const startTime = timeFromMatch ? `${timeFromMatch[1]}:${timeFromMatch[2]}` : eventTimeFrom
-    const endTime = timeToMatch ? `${timeToMatch[1]}:${timeToMatch[2]}` : eventTimeTo
+    
+    // For all-day events, just use the date portion without time conversion
+    // For regular events, use the datetime composable to extract local date and time from UTC strings
+    const startDate = dateTime.getLocalDate(event.start_time)
+    const endDate = dateTime.getLocalDate(event.end_time)
+    
+    let startTime: string
+    let endTime: string
+    
+    if (event.is_all_day) {
+      // For all-day events, use fixed times (don't convert from UTC)
+      startTime = '00:00'
+      endTime = '23:59'
+    } else {
+      // For regular events, convert UTC time to local time
+      startTime = dateTime.getLocalTime(event.start_time)
+      endTime = dateTime.getLocalTime(event.end_time)
+    }
 
     const classificationMap: Record<string, Meeting['classification']> = {
       'appointment': 'primary',
@@ -58,27 +68,31 @@ export function useCalendar() {
       'school_holiday': 'school_holiday',
       'urgent': 'warning',
       'cancelled': 'error',
+      'supervision': 'accent',
+      'parent': 'primary',
     }
 
-    const meetingClassification: Meeting['classification'] = classificationMap[eventType] || 'primary'
+    const meetingClassification: Meeting['classification'] = classificationMap[event.type] || 'primary'
+    const isMultiDay = !!(event.is_all_day && startDate !== endDate)
 
-    const eventDateTo = event.date_to || eventDateFrom
-    const endDate = eventDateTo ? eventDateTo.split('T')[0] : date
-    const isMultiDay = !!(event.is_all_day && eventDateFrom !== eventDateTo)
+    // Extract attendee names from participants
+    const attendees = event.participants?.map(p => p.name || p.email) || []
 
     return {
       id: eventId,
       title: eventTitle,
-      date,
+      date: startDate,
       endDate,
       startTime,
       endTime,
       classification: meetingClassification,
-      type: eventType,
+      type: event.type,
       description: event.description,
-      attendees: [],
-      isAllDay: event.is_all_day || false,
+      attendees,
+      isAllDay: event.is_all_day,
       isMultiDay,
+      location: event.location,
+      timezone: event.timezone,
     }
   }
 
@@ -91,7 +105,9 @@ export function useCalendar() {
     const expanded: Meeting[] = []
     const currentDate = new Date(startDate)
 
-    while (currentDate <= endDate) {
+    // For all-day events, the end date is exclusive (ends at start of that day)
+    // So we iterate up to but not including the end date
+    while (currentDate < endDate) {
       const dateStr = currentDate.toISOString().split('T')[0]
       expanded.push({
         ...meeting,
@@ -131,9 +147,9 @@ export function useCalendar() {
   const getEventsInRange = (startDate: Date, endDate: Date): Meeting[] => {
     if (!store.events || !Array.isArray(store.events)) return []
     const filteredEvents = store.events.filter((event: CalendarEvent) => {
-      if (!event.date_from) return false
-      const eventStart = new Date(event.date_from)
-      const eventEnd = new Date(event.date_to || event.date_from)
+      if (!event.start_time) return false
+      const eventStart = new Date(event.start_time)
+      const eventEnd = new Date(event.end_time)
       return eventStart <= endDate && eventEnd >= startDate
     })
     return convertAndExpandEvents(filteredEvents)
@@ -152,7 +168,8 @@ export function useCalendar() {
   }
 
   const getDayEvents = (date: Date): Meeting[] => {
-    const dayStr = date.toISOString().split('T')[0]
+    const dayStr = date.toISOString().split('T')[0] || ''
+    if (!dayStr) return []
     const dayStart = new Date(dayStr)
     dayStart.setHours(0, 0, 0, 0)
     const dayEnd = new Date(dayStr)
@@ -226,6 +243,7 @@ export function useCalendar() {
     error: computed(() => store.error),
     calendarName: computed(() => store.calendarName),
     calendarColor: computed(() => store.calendarColor),
+    calendarId: computed(() => store.calendarId),
 
     // Methods
     loadAllCalendarData,
