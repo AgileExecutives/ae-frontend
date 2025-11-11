@@ -125,19 +125,19 @@
             </router-link>
           </li>
 
-          <!-- DateTime Demo -->
+          <!-- client-booking -->
           <li>
             <router-link 
-              to="/datetime-demo" 
+              to="/client-booking" 
               class="tooltip tooltip-right lg:group-hover:tooltip-none" 
-              data-tip="DateTime Demo"
-              :class="{ 'active': $route.path === '/datetime-demo' }"
+              data-tip="Client Booking"
+              :class="{ 'active': $route.path === '/client-booking' }"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke-linejoin="round" stroke-linecap="round" stroke-width="2" fill="none" stroke="currentColor" class="inline-block size-4 my-1.5">
                 <path d="M12 2v10l3 3"></path>
                 <circle cx="12" cy="12" r="10"></circle>
               </svg>
-              <span class="lg:hidden lg:group-hover:inline">DateTime Demo</span>
+              <span class="lg:hidden lg:group-hover:inline">Client Booking</span>
             </router-link>
           </li>
 
