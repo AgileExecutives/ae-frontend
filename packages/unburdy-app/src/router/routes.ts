@@ -28,6 +28,12 @@ export const extraRoutes = [
         meta: { requiresAuth: true }
     },
     {
+        path: '/booking',
+        name: 'Booking',
+        component: () => import('../views/BookingView.vue'),
+        meta: { requiresAuth: true }
+    },
+    {
         path: '/client-booking',
         name: 'ClientBooking',
         component: () => import('../views/ClientBookingView.vue'),

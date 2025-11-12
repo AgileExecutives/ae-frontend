@@ -109,15 +109,15 @@ const getStatusClasses = (day: typeof calendarDays.value[0]) => {
   }
   
   if (day.isSelected) {
-    return 'bg-primary text-primary-content ring-2 ring-primary ring-offset-2'
+    return 'bg-primary text-white ring-2 ring-primary ring-offset-2 font-bold'
   }
   
   if (day.status === 'available') {
-    return 'bg-success/20 text-success-content hover:bg-success/30 cursor-pointer'
+    return 'bg-success/20 text-base-content hover:bg-success/30 cursor-pointer border border-success/30'
   }
   
   if (day.status === 'partial') {
-    return 'bg-warning/20 text-warning-content hover:bg-warning/30 cursor-pointer'
+    return 'bg-warning/20 text-base-content hover:bg-warning/30 cursor-pointer border border-warning/30'
   }
   
   return 'bg-base-100 text-base-content/50 cursor-not-allowed'
@@ -137,10 +137,10 @@ const handleDayClick = (day: typeof calendarDays.value[0]) => {
 </script>
 
 <template>
-  <div class="bg-base-100 rounded-lg shadow-lg p-4">
+  <div class="card bg-base-100/50 shadow-lg">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-lg md:text-xl font-bold">{{ monthName }}</h2>
+    <div class="card-header flex-row items-center justify-between p-4">
+      <h2 class="card-title text-lg md:text-xl">{{ monthName }}</h2>
       <div class="flex gap-1">
         <button
           class="btn btn-sm btn-circle btn-ghost"
@@ -165,6 +165,8 @@ const handleDayClick = (day: typeof calendarDays.value[0]) => {
         </button>
       </div>
     </div>
+    
+    <div class="card-body p-4">
 
     <!-- Weekday headers -->
     <div class="grid grid-cols-7 gap-1 mb-2">
@@ -214,9 +216,10 @@ const handleDayClick = (day: typeof calendarDays.value[0]) => {
         </button>
       </div>
     </div>
+    </div>
 
     <!-- Legend -->
-    <div class="mt-4 pt-4 border-t border-base-200">
+    <div class="card-footer p-4">
       <div class="flex flex-wrap gap-3 text-xs">
         <div class="flex items-center gap-1.5">
           <div class="w-3 h-3 rounded bg-success/20 border border-success" />

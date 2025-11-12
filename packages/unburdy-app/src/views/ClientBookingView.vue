@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { CalendarCheck, AlertCircle } from 'lucide-vue-next'
-import MonthCalendar from '@/components/client-booking/MonthCalendar.vue'
-import SlotView from '@/components/client-booking/SlotView.vue'
+import BookingSlotView from '@/components/client-booking/BookingSlotView.vue'
 import BookingModal from '@/components/client-booking/BookingModal.vue'
 import { useClientBooking } from '@/composables/useClientBooking'
 import type { TimeSlot, RecurrencePattern, BookingConfig } from '@/types/client-booking'
+import BookingMonthCalendar from '@/components/client-booking/BookingMonthCalendar.vue'
 
 // Booking configuration
 const bookingConfig: BookingConfig = {
@@ -175,7 +175,7 @@ const handleModalClose = () => {
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Month Calendar -->
       <div class="order-1">
-        <MonthCalendar
+        <BookingMonthCalendar
           :month-data="booking.monthData.value"
           :selected-date="booking.selectedDate.value"
           @select-date="booking.selectDate"
@@ -184,20 +184,12 @@ const handleModalClose = () => {
           @go-to-today="booking.goToToday"
         />
 
-        <!-- Stats -->
-        <div class="mt-4 stats shadow w-full">
-          <div class="stat">
-            <div class="stat-title">Verfügbare Slots</div>
-            <div class="stat-value text-primary">{{ booking.availableSlotsCount.value }}</div>
-            <div class="stat-desc">In diesem Monat</div>
-          </div>
-        </div>
       </div>
 
       <!-- Slot View -->
       <div class="order-2">
         <div v-if="booking.selectedDate.value && booking.selectedDaySlots.value">
-          <SlotView
+          <BookingSlotView
             :selected-date="booking.selectedDate.value"
             :grouped-slots="booking.selectedDaySlots.value"
             @select-slot="handleSlotSelect"
@@ -205,7 +197,7 @@ const handleModalClose = () => {
         </div>
         <div
           v-else
-          class="bg-base-100 rounded-lg shadow-lg p-12 flex flex-col items-center justify-center text-center"
+          class="card bg-base-100/50 shadow-lg p-12 flex flex-col items-center justify-center text-center"
         >
           <CalendarCheck class="w-16 h-16 text-base-content/20 mb-4" />
           <p class="text-base-content/70 font-medium mb-2">
