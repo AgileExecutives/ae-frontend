@@ -90,6 +90,28 @@ export function useCalendarApi() {
     }
   }
 
+  async function getCalendarsList() {
+    try {
+      if (typeof apiClient.getCalendars !== 'function') {
+        console.warn('📅 Calendar API methods not available yet')
+        return { success: false, error: 'Calendar API not available', data: [] }
+      }
+      const response = await apiClient.getCalendars()
+      if (response.success && response.data) {
+        const calendarData = Array.isArray(response.data) ? response.data : []
+        return { success: true, data: calendarData }
+      }
+      else {
+        const errorMessage = response.error || 'Failed to load calendars'
+        return { success: false, error: errorMessage, data: [] }
+      }
+    }
+    catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
+      return { success: false, error: errorMessage, data: [] }
+    }
+  }
+
   async function createCalendarEntry(meeting: Meeting) {
     setIsLoading(true)
     setError(null)
@@ -316,6 +338,7 @@ export function useCalendarApi() {
 
   return {
     fetchCalendarData,
+    getCalendarsList,
     createCalendarEntry,
     updateCalendarEntry,
     deleteCalendarEntry,
