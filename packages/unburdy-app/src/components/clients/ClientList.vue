@@ -2,7 +2,9 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { ChevronLeft, ChevronRight, Users, Plus, Search } from 'lucide-vue-next'
 import ViewCard from '../ViewCard.vue'
+import BookingLinkModal from './BookingLinkModal.vue'
 import { useClients } from '@/composables/useClients'
+import { getApiClient } from '@/config/api-config'
 import type { Client } from '@agile-exec/api-client'
 
 // Use the clients composable directly
@@ -41,6 +43,8 @@ onMounted(async () => {
 // Local state
 const selectedClients = ref<Set<number>>(new Set())
 const statusFilter = ref(currentListSelection.value)
+const showBookingLinkModal = ref(false)
+const selectedClientForBooking = ref<Client | null>(null)
 
 // Screen size detection
 const isMobile = ref(false)
@@ -205,6 +209,35 @@ const statusOptions = computed(() => [
   { value: 'archived', label: 'Archived', count: clientCounts.value.archived }
 ])
 
+// Handle booking link generation
+const handleBookingLink = (client: Client) => {
+  selectedClientForBooking.value = client
+  showBookingLinkModal.value = true
+}
+
+// Handle status change
+const handleStatusChange = async (client: Client, newStatus: string) => {
+  if (!client.id) return
+  
+  try {
+    const apiClient = getApiClient()
+    const response = await apiClient.updateClient(client.id, {
+      ...client,
+      status: newStatus
+    })
+    
+    if (response.success) {
+      // Reload clients to reflect the change
+      await ensureInitialized()
+    } else {
+      alert(response.error || 'Failed to update client status')
+    }
+  } catch (error) {
+    console.error('Failed to update client status:', error)
+    alert('Failed to update client status')
+  }
+}
+
 </script>
 
 <template>
@@ -279,10 +312,12 @@ const statusOptions = computed(() => [
               <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Contact</th>
               <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Therapy</th>
               <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Status</th>
+              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm w-12"></th>
             </tr>
             <tr class="lg:hidden bg-base-200/30 backdrop-blur-sm border-b border-base-300">
               <th class="w-12 sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Name</th>
               <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm">Parent</th>
+              <th class="sticky top-0 z-20 bg-base-200/80 backdrop-blur-sm w-12"></th>
             </tr>
           </thead>
           
@@ -366,12 +401,82 @@ const statusOptions = computed(() => [
               
               <!-- Status -->
               <td class="hidden lg:table-cell">
-                <span 
-                  class="badge badge-sm capitalize"
-                  :class="getStatusBadge(client.status)"
-                >
-                  {{ client.status }}
-                </span>
+                <div class="flex items-center gap-2">
+                  <span 
+                    class="badge badge-sm capitalize"
+                    :class="getStatusBadge(client.status)"
+                  >
+                    {{ client.status }}
+                  </span>
+                </div>
+              </td>
+              
+              <!-- Actions Dropdown -->
+              <td class="w-12" @click.stop>
+                <div class="dropdown dropdown-end">
+                  <button
+                    tabindex="0"
+                    class="btn btn-ghost btn-sm btn-circle"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                      />
+                    </svg>
+                  </button>
+                  <ul
+                    tabindex="0"
+                    class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-56"
+                  >
+                    <li class="menu-title">
+                      <span>Status ändern</span>
+                    </li>
+                    <li v-if="client.status !== 'active'">
+                      <a @click="handleStatusChange(client, 'active')">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Set to Active
+                      </a>
+                    </li>
+                    <li v-if="client.status !== 'waiting'">
+                      <a @click="handleStatusChange(client, 'waiting')">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Set to Waiting
+                      </a>
+                    </li>
+                    <li v-if="client.status !== 'archived'">
+                      <a @click="handleStatusChange(client, 'archived')">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                        </svg>
+                        Set to Archived
+                      </a>
+                    </li>
+                    <li class="menu-title mt-2">
+                      <span>Aktionen</span>
+                    </li>
+                    <li>
+                      <a @click="handleBookingLink(client)">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
+                        Booking Link...
+                      </a>
+                    </li>
+                  </ul>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -379,7 +484,7 @@ const statusOptions = computed(() => [
           <!-- Empty State -->
           <tbody v-if="filteredClients.length === 0">
             <tr>
-              <td colspan="4" class="text-center py-8">
+              <td colspan="5" class="text-center py-8">
                 <div class="flex flex-col items-center gap-2 text-base-content/50">
                   <Users class="w-12 h-12" />
                   <div>
@@ -415,6 +520,12 @@ const statusOptions = computed(() => [
       </div>
     </template>
   </ViewCard>
+  
+  <!-- Booking Link Modal -->
+  <BookingLinkModal
+    v-model="showBookingLinkModal"
+    :client="selectedClientForBooking"
+  />
 </template>
 
 <style scoped>
