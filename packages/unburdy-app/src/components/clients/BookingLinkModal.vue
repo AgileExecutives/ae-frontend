@@ -225,18 +225,20 @@ const fetchTemplates = async () => {
       user_id: userId
     })
     
-    if (response.success && response.data) {
+    if (response?.success && response?.data) {
       templates.value = Array.isArray(response.data) ? response.data : []
       // Auto-select first template if available
       if (templates.value.length > 0 && templates.value[0]?.id) {
         selectedTemplateId.value = templates.value[0].id
       }
     } else {
-      error.value = response.error || 'Fehler beim Laden der Vorlagen'
+      error.value = response?.message || response?.error || 'Fehler beim Laden der Vorlagen'
+      templates.value = []
     }
   } catch (err) {
     console.error('Failed to fetch templates:', err)
-    error.value = 'Fehler beim Laden der Vorlagen'
+    error.value = err instanceof Error ? err.message : 'Fehler beim Laden der Vorlagen'
+    templates.value = []
   } finally {
     loadingTemplates.value = false
   }
@@ -266,14 +268,20 @@ const handleGenerate = async () => {
       token_purpose: tokenPurpose.value
     })
 
-    if (response.success && response.data) {
-      generatedLink.value = response.data as BookingLinkResponse
+    if (response?.success && response?.data) {
+      generatedLink.value = {
+        token: response.data.token || '',
+        url: response.data.url || '',
+        expires_at: response.data.expires_at,
+        created_at: response.data.created_at,
+        purpose: response.data.purpose
+      }
     } else {
-      error.value = response.error || 'Fehler beim Generieren des Links'
+      error.value = response?.message || response?.error || 'Fehler beim Generieren des Links'
     }
   } catch (err) {
     console.error('Failed to generate booking link:', err)
-    error.value = 'Fehler beim Generieren des Links'
+    error.value = err instanceof Error ? err.message : 'Fehler beim Generieren des Links'
   } finally {
     loading.value = false
   }

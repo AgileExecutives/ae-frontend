@@ -15,6 +15,14 @@ const emit = defineEmits<{
   goToToday: []
 }>()
 
+// Helper function to format date as YYYY-MM-DD in local timezone
+const formatLocalDate = (year: number, month: number, day: number): string => {
+  const yyyy = year.toString()
+  const mm = month.toString().padStart(2, '0')
+  const dd = day.toString().padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
 // Generate calendar grid (including previous and next month days)
 const calendarDays = computed(() => {
   const { year, month, days } = props.monthData
@@ -38,11 +46,12 @@ const calendarDays = computed(() => {
   
   // Add days from previous month
   const prevMonth = new Date(year, month - 2, 1)
+  const prevMonthYear = prevMonth.getFullYear()
+  const prevMonthNum = prevMonth.getMonth() + 1
   const prevMonthLastDay = new Date(year, month - 1, 0).getDate()
   for (let i = startDay - 1; i >= 0; i--) {
     const day = prevMonthLastDay - i
-    const date = new Date(prevMonth.getFullYear(), prevMonth.getMonth(), day)
-    const dateStr = date.toISOString().split('T')[0] || ''
+    const dateStr = formatLocalDate(prevMonthYear, prevMonthNum, day)
     grid.push({
       date: dateStr,
       dayNumber: day,
@@ -56,12 +65,12 @@ const calendarDays = computed(() => {
   }
   
   // Add days from current month
-  const today = new Date().toISOString().split('T')[0]
+  const now = new Date()
+  const today = formatLocalDate(now.getFullYear(), now.getMonth() + 1, now.getDate())
   for (let day = 1; day <= lastDayOfMonth.getDate(); day++) {
-    const date = new Date(year, month - 1, day)
-    const dateStr = date.toISOString().split('T')[0] || ''
+    const dateStr = formatLocalDate(year, month, day)
     const dayData = days.find(d => d.date === dateStr)
-    const isPast = dateStr < (today || '')
+    const isPast = dateStr < today
     
     grid.push({
       date: dateStr,
@@ -78,9 +87,10 @@ const calendarDays = computed(() => {
   // Add days from next month to complete grid (42 days = 6 weeks)
   const remainingDays = 42 - grid.length
   const nextMonth = new Date(year, month, 1)
+  const nextMonthYear = nextMonth.getFullYear()
+  const nextMonthNum = nextMonth.getMonth() + 1
   for (let day = 1; day <= remainingDays; day++) {
-    const date = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), day)
-    const dateStr = date.toISOString().split('T')[0] || ''
+    const dateStr = formatLocalDate(nextMonthYear, nextMonthNum, day)
     grid.push({
       date: dateStr,
       dayNumber: day,

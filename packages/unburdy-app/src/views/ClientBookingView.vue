@@ -45,6 +45,9 @@ const bookingConfig = ref<BookingConfig>({
   }
 })
 
+// Initialize booking composable (will be updated after API load)
+const booking = useClientBooking(bookingConfig.value)
+
 // Fetch booking configuration from API using token
 const fetchBookingConfig = async () => {
   isLoadingConfig.value = true
@@ -62,9 +65,19 @@ const fetchBookingConfig = async () => {
     if (response?.data) {
       const freeSlotsData = response.data
       
+      console.log('API Response:', {
+        hasConfig: !!freeSlotsData.config,
+        hasMonthData: !!freeSlotsData.monthData,
+        hasSlots: !!freeSlotsData.slots,
+        slotsCount: freeSlotsData.slots?.length || 0,
+        monthDataDays: freeSlotsData.monthData?.days?.length || 0,
+        monthDataSample: freeSlotsData.monthData?.days?.[0],
+        slotsSample: freeSlotsData.slots?.slice(0, 2)
+      })
+      
       // Update booking config from API response
       if (freeSlotsData.config) {
-        bookingConfig.value = {
+        const newConfig: BookingConfig = {
           slotDuration: freeSlotsData.config.duration || 30,
           bufferTime: freeSlotsData.config.buffer_time || 5,
           maxSeriesCount: freeSlotsData.config.number_max || 10,
@@ -72,17 +85,191 @@ const fetchBookingConfig = async () => {
           maxAdvanceDays: 90, // TODO: Get from template
           weeklyAvailability: freeSlotsData.config.weekly_availability || bookingConfig.value.weeklyAvailability
         }
-      }
-      
-      // Process available slots
-      if (freeSlotsData.slots && Array.isArray(freeSlotsData.slots)) {
-        // TODO: Map slots to booking.monthData
-        console.log('Available slots:', freeSlotsData.slots)
+        
+        bookingConfig.value = newConfig
+        
+        // Update the booking composable config
+        booking.updateConfig(newConfig)
       }
       
       // Process month data if available
       if (freeSlotsData.monthData) {
-        console.log('Month data:', freeSlotsData.monthData)
+        // If we have both monthData and slots array, we need to populate the days with slots
+        let daysWithSlots = freeSlotsData.monthData.days || []
+        
+        // If there's also a slots array, group them by date and add to days
+        if (freeSlotsData.slots && Array.isArray(freeSlotsData.slots)) {
+          const slotsByDate = new Map<string, any[]>()
+          
+          // Helper function to extract time from ISO datetime string
+          const extractTime = (isoString: string): string => {
+            if (!isoString) return ''
+            const timePart = isoString.split('T')[1]
+            if (!timePart) return ''
+            // Return HH:MM (remove seconds if present)
+            return timePart.substring(0, 5)
+          }
+          
+          freeSlotsData.slots.forEach((slot: any) => {
+            const date = slot.date || slot.start_time?.split('T')[0] || ''
+            if (!slotsByDate.has(date)) {
+              slotsByDate.set(date, [])
+            }
+            slotsByDate.get(date)?.push({
+              id: slot.id || '',
+              time: slot.time || extractTime(slot.start_time),
+              date: date,
+              startTime: extractTime(slot.start_time),
+              endTime: extractTime(slot.end_time),
+              duration: slot.duration || freeSlotsData.config?.duration || 30,
+              available: slot.available ?? true,
+              isAvailable: slot.available ?? true,
+              timeOfDay: (slot.time_of_day as 'morning' | 'afternoon' | 'evening') || 'morning',
+              timezone: slot.timezone || 'Europe/Berlin'
+            })
+          })
+          
+          console.log(`Slots grouped by date: ${slotsByDate.size} days`)
+          
+          // Update the monthData days with the slots
+          daysWithSlots = (freeSlotsData.monthData.days || []).map((day: any) => {
+            const daySlots = slotsByDate.get(day.date) || []
+            return {
+              ...day,
+              slots: daySlots
+            }
+          })
+        }
+        
+        // Map API monthData to booking monthData format
+        booking.setMonthData({
+          year: freeSlotsData.monthData.year || new Date().getFullYear(),
+          month: freeSlotsData.monthData.month || new Date().getMonth() + 1,
+          days: daysWithSlots.map((day: any) => {
+            const daySlots = (day.slots || []).map((slot: any) => ({
+              id: slot.id || '',
+              time: slot.time || slot.startTime || '',
+              date: slot.date || day.date || '',
+              startTime: slot.startTime || '',
+              endTime: slot.endTime || '',
+              duration: slot.duration || freeSlotsData.config?.duration || 30,
+              available: slot.available ?? slot.isAvailable ?? true,
+              isAvailable: slot.available ?? slot.isAvailable ?? true,
+              timeOfDay: (slot.time_of_day || slot.timeOfDay) as 'morning' | 'afternoon' | 'evening' || 'morning',
+              timezone: slot.timezone || 'Europe/Berlin'
+            }))
+            
+            // A slot is available if the 'available' field is true OR undefined (default to true)
+            const availableSlots = daySlots.filter((s: any) => s.available !== false)
+            
+            console.log(`MonthData day ${day.date}: ${daySlots.length} total, ${availableSlots.length} available`)
+            
+            return {
+              date: day.date || '',
+              dayOfWeek: day.dayOfWeek || 0,
+              isCurrentMonth: day.isCurrentMonth ?? true,
+              isToday: day.isToday ?? false,
+              slots: daySlots,
+              availableCount: availableSlots.length,
+              totalCount: daySlots.length,
+              status: (availableSlots.length === daySlots.length && daySlots.length > 0 
+                ? 'available' 
+                : availableSlots.length > 0 
+                  ? 'partial' 
+                  : 'none') as 'available' | 'partial' | 'none'
+            }
+          })
+        })
+        
+        console.log('MonthData days with status:', freeSlotsData.monthData.days?.map((d: any) => ({
+          date: d.date,
+          slots: d.slots?.length || 0,
+          status: d.status || 'calculated in mapping'
+        })).slice(0, 5))
+      } else if (freeSlotsData.slots && Array.isArray(freeSlotsData.slots)) {
+        // If only slots array is provided, group by date
+        console.log('Processing flat slots array')
+        console.log('First 3 slots sample:', freeSlotsData.slots.slice(0, 3))
+        
+        const slotsByDate = new Map<string, any[]>()
+        
+        freeSlotsData.slots.forEach((slot: any) => {
+          const date = slot.date || slot.start_time?.split('T')[0] || ''
+          if (!slotsByDate.has(date)) {
+            slotsByDate.set(date, [])
+          }
+          slotsByDate.get(date)?.push({
+            id: slot.id || '',
+            time: slot.time || '',
+            date: date,
+            startTime: slot.start_time || '',
+            endTime: slot.end_time || '',
+            duration: slot.duration || freeSlotsData.config?.duration || 30,
+            available: slot.available ?? true,
+            isAvailable: slot.available ?? true,
+            timeOfDay: (slot.time_of_day as 'morning' | 'afternoon' | 'evening') || 'morning',
+            timezone: slot.timezone || 'Europe/Berlin'
+          })
+        })
+        
+        // Create monthData from grouped slots
+        // Group days by month and create separate monthData for the earliest month with slots
+        const allDays = Array.from(slotsByDate.entries())
+          .map(([date, slots]) => {
+            const dateObj = new Date(date)
+            // A slot is available if the 'available' field is true OR undefined (default to true)
+            const availableSlots = slots.filter((s: any) => s.available !== false)
+            
+            console.log(`Date ${date}: ${slots.length} total, ${availableSlots.length} available, first slot:`, slots[0])
+            
+            return {
+              date,
+              dateObj,
+              year: dateObj.getFullYear(),
+              month: dateObj.getMonth() + 1,
+              dayOfWeek: dateObj.getDay(),
+              isToday: date === new Date().toISOString().split('T')[0],
+              slots,
+              availableCount: availableSlots.length,
+              totalCount: slots.length,
+              status: (availableSlots.length === slots.length && slots.length > 0 
+                ? 'available' 
+                : availableSlots.length > 0 
+                  ? 'partial' 
+                  : 'none') as 'available' | 'partial' | 'none'
+            }
+          })
+          .sort((a, b) => a.date.localeCompare(b.date))
+        
+        if (allDays.length > 0) {
+          // Find the first month with available slots
+          const firstDayWithSlots = allDays[0]!
+          const targetYear = firstDayWithSlots.year
+          const targetMonth = firstDayWithSlots.month
+          
+          // Filter days for the target month
+          const monthDays = allDays
+            .filter(d => d.year === targetYear && d.month === targetMonth)
+            .map(d => ({
+              date: d.date,
+              dayOfWeek: d.dayOfWeek,
+              isCurrentMonth: true,
+              isToday: d.isToday,
+              slots: d.slots,
+              availableCount: d.availableCount,
+              totalCount: d.totalCount,
+              status: d.status
+            }))
+          
+          console.log(`Showing month ${targetYear}-${targetMonth}: ${monthDays.length} days, ${monthDays.filter(d => d.availableCount > 0).length} with available slots`)
+          console.log(`Total slots across all days: ${allDays.reduce((sum, d) => sum + d.totalCount, 0)}`)
+          
+          booking.setMonthData({
+            year: targetYear,
+            month: targetMonth,
+            days: monthDays
+          })
+        }
       }
     } else {
       configError.value = 'Fehler beim Laden der Buchungsinformationen'
@@ -107,9 +294,6 @@ onMounted(async () => {
     isLoadingConfig.value = false
   }
 })
-
-// Initialize booking composable
-const booking = useClientBooking(bookingConfig.value)
 
 // Modal state
 const isModalOpen = ref(false)

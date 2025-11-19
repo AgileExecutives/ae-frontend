@@ -24,13 +24,15 @@ export function useClientBooking(config: BookingConfig) {
   const currentMonth = ref(new Date())
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const bookingConfig = ref<BookingConfig>(config)
+  const monthDataOverride = ref<MonthData | null>(null)
 
   /**
    * Get day name from date
    */
-  const getDayName = (date: Date): keyof typeof config.weeklyAvailability => {
+  const getDayName = (date: Date): keyof typeof bookingConfig.value.weeklyAvailability => {
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const
-    return days[date.getDay()] as keyof typeof config.weeklyAvailability
+    return days[date.getDay()] as keyof typeof bookingConfig.value.weeklyAvailability
   }
 
   /**
@@ -86,7 +88,7 @@ export function useClientBooking(config: BookingConfig) {
   const generateSlotsForDate = (date: Date): TimeSlot[] => {
     const dateStr = date.toISOString().split('T')[0] || ''
     const dayName = getDayName(date)
-    const timeRanges = config.weeklyAvailability[dayName] || []
+    const timeRanges = bookingConfig.value.weeklyAvailability[dayName] || []
     
     const slots: TimeSlot[] = []
     
@@ -95,7 +97,7 @@ export function useClientBooking(config: BookingConfig) {
       let currentTime = range.start
       
       while (compareTimes(currentTime, range.end) < 0) {
-        const slotEndTime = addMinutes(currentTime, config.slotDuration)
+        const slotEndTime = addMinutes(currentTime, bookingConfig.value.slotDuration)
         
         // Check if slot fits within range
         if (compareTimes(slotEndTime, range.end) <= 0) {
@@ -112,7 +114,7 @@ export function useClientBooking(config: BookingConfig) {
         }
         
         // Move to next slot (including buffer time)
-        currentTime = addMinutes(currentTime, config.slotDuration + config.bufferTime)
+        currentTime = addMinutes(currentTime, bookingConfig.value.slotDuration + bookingConfig.value.bufferTime)
       }
     }
     
@@ -132,7 +134,7 @@ export function useClientBooking(config: BookingConfig) {
     let count = 1 // Start with the initial slot
     let currentDate = new Date(slot.date)
     
-    for (let i = 1; i < config.maxSeriesCount; i++) {
+    for (let i = 1; i < bookingConfig.value.maxSeriesCount; i++) {
       currentDate.setDate(currentDate.getDate() + weekIncrement)
       const dateStr = currentDate.toISOString().split('T')[0] || ''
       
@@ -201,9 +203,9 @@ export function useClientBooking(config: BookingConfig) {
       if (currentDate < today) continue
       
       // Check max advance days
-      if (config.maxAdvanceDays) {
+      if (bookingConfig.value.maxAdvanceDays) {
         const maxDate = new Date(today)
-        maxDate.setDate(maxDate.getDate() + config.maxAdvanceDays)
+        maxDate.setDate(maxDate.getDate() + bookingConfig.value.maxAdvanceDays)
         if (currentDate > maxDate) continue
       }
       
@@ -302,7 +304,14 @@ export function useClientBooking(config: BookingConfig) {
   }
 
   // Computed properties
-  const monthData = computed(() => getMonthData(currentMonth.value))
+  const monthData = computed(() => {
+    // If we have override data from API, use that
+    if (monthDataOverride.value) {
+      return monthDataOverride.value
+    }
+    // Otherwise generate from config
+    return getMonthData(currentMonth.value)
+  })
   
   const selectedDaySlots = computed(() => {
     if (!selectedDate.value) return null
@@ -351,6 +360,22 @@ export function useClientBooking(config: BookingConfig) {
     selectedDate.value = today || null
   }
 
+  /**
+   * Update booking configuration
+   */
+  const updateConfig = (newConfig: BookingConfig) => {
+    bookingConfig.value = newConfig
+  }
+
+  /**
+   * Set month data from API
+   */
+  const setMonthData = (data: MonthData) => {
+    monthDataOverride.value = data
+    // Update current month to match the data
+    currentMonth.value = new Date(data.year, data.month - 1, 1)
+  }
+
   return {
     // State
     appointments,
@@ -377,6 +402,8 @@ export function useClientBooking(config: BookingConfig) {
     calculateSeriesAvailability,
     groupSlotsByTimeOfDay,
     getDayAvailability,
-    getMonthData
+    getMonthData,
+    updateConfig,
+    setMonthData
   }
 }

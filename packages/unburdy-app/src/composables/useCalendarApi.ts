@@ -336,6 +336,38 @@ export function useCalendarApi() {
     }
   }
 
+  async function updateCalendar(calendarData: { id: number; name?: string; color?: string; weekly_availability?: any }) {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      if (typeof apiClient.updateCalendar !== 'function') {
+        throw new Error('updateCalendar is not available on the API client')
+      }
+
+      const response = await apiClient.updateCalendar(calendarData.id, {
+        name: calendarData.name,
+        color: calendarData.color,
+        weekly_availability: calendarData.weekly_availability
+      })
+
+      if (response && response.success) {
+        return { success: true }
+      } else {
+        const errorMessage = response?.message || 'Failed to update calendar'
+        setError(errorMessage)
+        return { success: false, error: errorMessage }
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred'
+      setError(errorMessage)
+      return { success: false, error: errorMessage }
+    }
+    finally {
+      setIsLoading(false)
+    }
+  }
+
   return {
     fetchCalendarData,
     getCalendarsList,
@@ -345,5 +377,6 @@ export function useCalendarApi() {
     createCalendarSeries,
     updateCalendarSeries,
     deleteCalendarSeries,
+    updateCalendar,
   }
 }

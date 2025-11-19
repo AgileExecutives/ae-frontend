@@ -37,6 +37,6 @@ export const extraRoutes = [
         path: '/booking/:token',
         name: 'ClientBooking',
         component: () => import('../views/ClientBookingView.vue'),
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: false }
     }
 ]
