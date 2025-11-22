@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-vue-next'
 import ViewCard from '../ViewCard.vue'
 
@@ -16,6 +16,17 @@ interface Meeting {
   endDate?: string // End date - YYYY-MM-DD format (for multi-day events)
   isAllDay?: boolean // All-day event flag
   isMultiDay?: boolean // Flag to indicate if event spans multiple days
+  color?: string // Hex color for the meeting
+}
+
+interface WeeklyAvailability {
+  monday?: { start: string; end: string }[]
+  tuesday?: { start: string; end: string }[]
+  wednesday?: { start: string; end: string }[]
+  thursday?: { start: string; end: string }[]
+  friday?: { start: string; end: string }[]
+  saturday?: { start: string; end: string }[]
+  sunday?: { start: string; end: string }[]
 }
 
 const props = withDefaults(defineProps<{
@@ -27,6 +38,8 @@ const props = withDefaults(defineProps<{
   showCurrentTime?: boolean
   isLoading?: boolean
   error?: string | null
+  calendarColor?: string
+  availability?: WeeklyAvailability
 }>(), {
   meetings: () => [],
   startHour: 8,
@@ -35,7 +48,9 @@ const props = withDefaults(defineProps<{
   date: () => new Date(),
   showCurrentTime: true,
   isLoading: false,
-  error: null
+  error: null,
+  calendarColor: '#3b82f6',
+  availability: () => ({})
 })
 
 const emit = defineEmits<{
@@ -48,6 +63,15 @@ const emit = defineEmits<{
   retryLoad: []
 }>()
 
+// Debug: Watch availability prop changes
+watch(() => props.availability, (newVal, oldVal) => {
+  console.log('📅 CalendarWeek availability prop changed!')
+  console.log('  New value:', newVal)
+  console.log('  Keys:', Object.keys(newVal || {}))
+  console.log('  Old value:', oldVal)
+  console.log('  JSON:', JSON.stringify(newVal))
+}, { immediate: true, deep: true })
+
 // Current time tracking
 const currentTime = ref(new Date())
 const updateCurrentTime = () => {
@@ -57,6 +81,7 @@ const updateCurrentTime = () => {
 let timeInterval: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
+  console.log('📅 CalendarWeek mounted, availability:', props.availability)
   if (props.showCurrentTime) {
     timeInterval = setInterval(updateCurrentTime, 60000) // Update every minute
   }
@@ -90,6 +115,7 @@ const weekDays = computed(() => {
       dateStr: day.toISOString().split('T')[0],
       dayName: day.toLocaleDateString('en-US', { weekday: 'short' }),
       dayNumber: day.getDate(),
+      dayOfWeek: day.getDay(), // 0 = Sunday, 1 = Monday, etc.
       isToday: day.toDateString() === new Date().toDateString()
     })
   }
@@ -391,10 +417,15 @@ const getFirstAllDayEvent = (dateStr: string): Meeting | undefined => {
 }
 
 // Meeting color mapping for Tailwind CSS classes - solid colors for visibility
-const getMeetingClasses = (classification: string, eventType?: string, isAllDay?: boolean) => {
+const getMeetingClasses = (classification: string, eventType?: string, isAllDay?: boolean, meetingColor?: string) => {
   // Special handling for public holidays - always red
   if (eventType === 'public_holiday' || eventType === 'holiday' || eventType === 'feiertag') {
     return 'bg-red-500 text-white border-red-600'
+  }
+  
+  // If meeting has its own color, don't use classification
+  if (meetingColor) {
+    return '' // Will use inline styles instead
   }
   
   // Ensure we have a valid classification, default to primary
@@ -417,8 +448,25 @@ const getMeetingClasses = (classification: string, eventType?: string, isAllDay?
   return classes
 }
 
+// Helper to get inline styles for custom colors
+const getMeetingStyles = (meetingColor?: string) => {
+  if (!meetingColor) {
+    // Use calendar color as fallback
+    return {
+      backgroundColor: props.calendarColor,
+      borderColor: props.calendarColor,
+      color: '#ffffff'
+    }
+  }
+  return {
+    backgroundColor: meetingColor,
+    borderColor: meetingColor,
+    color: '#ffffff'
+  }
+}
+
 // All-day event color mapping - more compact style
-const getAllDayClasses = (classification: string, eventType?: string) => {
+const getAllDayClasses = (classification: string, eventType?: string, meetingColor?: string) => {
   // Special handling for public holidays - always red
   if (eventType === 'public_holiday') {
     return 'bg-red-500/90 text-white border-red-600/50'
@@ -427,6 +475,11 @@ const getAllDayClasses = (classification: string, eventType?: string) => {
   // Also check for holiday keyword variations
   if (eventType === 'holiday' || eventType === 'feiertag') {
     return 'bg-red-500/90 text-white border-red-600/50'
+  }
+  
+  // If meeting has its own color, don't use classification
+  if (meetingColor) {
+    return '' // Will use inline styles instead
   }
   
   // Ensure we have a valid classification, default to primary
@@ -447,6 +500,59 @@ const getAllDayClasses = (classification: string, eventType?: string) => {
   const classes = colorMap[validClassification as keyof typeof colorMap] || colorMap.primary
   
   return classes
+}
+
+// Helper to get inline styles for custom colors (all-day version)
+const getAllDayStyles = (meetingColor?: string) => {
+  if (!meetingColor) {
+    // Use calendar color as fallback with transparency
+    const color = props.calendarColor
+    return {
+      backgroundColor: color + 'cc', // 80% opacity
+      borderColor: color + '80', // 50% opacity
+      color: '#ffffff'
+    }
+  }
+  return {
+    backgroundColor: meetingColor + 'cc', // 80% opacity
+    borderColor: meetingColor + '80', // 50% opacity
+    color: '#ffffff'
+  }
+}
+
+// Helper to check if a time is within availability
+const isTimeInAvailability = (dayOfWeek: number, timeStr: string): boolean => {
+  if (!props.availability || Object.keys(props.availability).length === 0) return false
+  
+  const dayMap: Record<number, keyof WeeklyAvailability> = {
+    1: 'monday',
+    2: 'tuesday',
+    3: 'wednesday',
+    4: 'thursday',
+    5: 'friday',
+    6: 'saturday',
+    0: 'sunday'
+  }
+  
+  const dayKey = dayMap[dayOfWeek]
+  if (!dayKey) return false
+  
+  const dayAvailability = props.availability[dayKey]
+    
+  if (!dayAvailability || dayAvailability.length === 0) return false
+  
+  // Convert time string to minutes for comparison
+  const [hours, minutes] = timeStr.split(':').map(Number)
+  const timeInMinutes = (hours || 0) * 60 + (minutes || 0)
+  
+  return dayAvailability.some((range: { start: string; end: string }) => {
+    const [startHours, startMinutes] = range.start.split(':').map(Number)
+    const [endHours, endMinutes] = range.end.split(':').map(Number)
+    const startInMinutes = (startHours || 0) * 60 + (startMinutes || 0)
+    const endInMinutes = (endHours || 0) * 60 + (endMinutes || 0)
+    
+    return timeInMinutes >= startInMinutes && timeInMinutes < endInMinutes
+  })
 }
 
 // Navigation handlers
@@ -646,7 +752,8 @@ const weekTitle = computed(() => {
             <div
               v-for="slot in timeSlots"
               :key="`click-${day.dateStr}-${slot.time}`"
-              class="absolute w-full hover:bg-base-200/30 transition-colors cursor-pointer"
+              class="absolute w-full transition-colors cursor-pointer"
+              :class="isTimeInAvailability(day.dayOfWeek, slot.time)  ? 'bg-base-100/30  hover:bg-success/10' : 'hover:bg-base-200/30'"
               :style="{
                 top: `${slot.slotIndex * slotHeight}px`,
                 height: `${slotHeight}px`
@@ -668,13 +775,14 @@ const weekTitle = computed(() => {
               v-for="meeting in processedMeetings.filter(m => m.dayIndex === dayIndex)"
               :key="meeting.id"
               class="absolute rounded shadow-sm cursor-pointer transition-all duration-200 hover:shadow-md hover:z-30 group border"
-              :class="getMeetingClasses(meeting.classification || 'primary', meeting.type, meeting.isAllDayInGrid)"
+              :class="meeting.isAllDayInGrid ? getAllDayClasses(meeting.classification || 'primary', meeting.type, meeting.color) : getMeetingClasses(meeting.classification || 'primary', meeting.type, meeting.isAllDayInGrid, meeting.color)"
               :style="{
                 top: `${meeting.top}px`,
                 height: `${meeting.height}px`,
                 left: meeting.left,
                 width: meeting.width,
-                zIndex: meeting.isAllDayInGrid ? 15 : 10
+                zIndex: meeting.isAllDayInGrid ? 15 : 10,
+                ...(meeting.isAllDayInGrid ? getAllDayStyles(meeting.color) : getMeetingStyles(meeting.color))
               }"
               @click="handleMeetingClick(meeting)"
             >

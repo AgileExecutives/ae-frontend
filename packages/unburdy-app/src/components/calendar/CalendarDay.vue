@@ -18,6 +18,16 @@ interface Meeting {
   isMultiDay?: boolean // Flag to indicate if event spans multiple days
 }
 
+interface WeeklyAvailability {
+  monday?: { start: string; end: string }[]
+  tuesday?: { start: string; end: string }[]
+  wednesday?: { start: string; end: string }[]
+  thursday?: { start: string; end: string }[]
+  friday?: { start: string; end: string }[]
+  saturday?: { start: string; end: string }[]
+  sunday?: { start: string; end: string }[]
+}
+
 const props = withDefaults(defineProps<{
   meetings?: Meeting[]
   startHour?: number
@@ -25,13 +35,15 @@ const props = withDefaults(defineProps<{
   slotHeight?: number
   date?: Date
   showCurrentTime?: boolean
+  availability?: WeeklyAvailability
 }>(), {
   meetings: () => [],
   startHour: 8,
   endHour: 18,
   slotHeight: 8,
   date: () => new Date(),
-  showCurrentTime: true
+  showCurrentTime: true,
+  availability: () => ({})
 })
 
 const emit = defineEmits<{
@@ -274,6 +286,26 @@ const currentTimeString = computed(() => {
   })
 })
 
+// Check if a time slot falls within availability hours
+const isTimeInAvailability = (timeStr: string): boolean => {
+  if (!props.availability || Object.keys(props.availability).length === 0) {
+    return false
+  }
+
+  // Get the day of week for the current date
+  const dayOfWeek = props.date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+  const dayAvailability = props.availability[dayOfWeek as keyof WeeklyAvailability]
+
+  if (!dayAvailability || dayAvailability.length === 0) {
+    return false
+  }
+
+  // Check if timeStr falls within any availability range
+  return dayAvailability.some(range => {
+    return timeStr >= range.start && timeStr < range.end
+  })
+}
+
 // Meeting color mapping for Tailwind CSS classes - solid colors for visibility
 const getMeetingClasses = (classification: string, eventType?: string) => {
   // Special handling for public holidays - always red
@@ -460,7 +492,8 @@ const dayTitle = computed(() => {
             <div
               v-for="slot in timeSlots"
               :key="`slot-${dayData.dateStr}-${slot.time}`"
-              class="absolute w-full cursor-pointer hover:bg-base-200/30 transition-colors"
+              class="absolute w-full cursor-pointer transition-colors"
+              :class="isTimeInAvailability(slot.time)  ? 'bg-base-100/30  hover:bg-success/10' : 'hover:bg-base-200/30'"
               :style="{
                 top: `${slot.top}px`,
                 height: `${props.slotHeight}px`

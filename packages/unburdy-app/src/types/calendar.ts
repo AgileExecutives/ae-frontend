@@ -59,4 +59,5 @@ export interface Meeting {
   isMultiDay?: boolean // Flag to indicate if event spans multiple days
   location?: string
   timezone?: string
+  color?: string // Hex color for the meeting (optional, falls back to calendar color)
 }

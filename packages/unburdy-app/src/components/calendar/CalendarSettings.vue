@@ -19,18 +19,22 @@
         <label class="label">
           <span class="label-text font-semibold">Calendar Color</span>
         </label>
-        <div class="grid grid-cols-4 gap-2">
+        <div class="grid grid-cols-6 gap-2">
           <button
             v-for="color in availableColors"
-            :key="color"
-            class="btn btn-sm h-12"
-            :class="[
-              `btn-${color}`,
-              { 'ring-2 ring-offset-2 ring-base-content': localSettings.color === color }
-            ]"
-            @click="localSettings.color = color"
+            :key="color.value"
+            class="btn btn-sm h-12 border-2"
+            :style="{
+              backgroundColor: color.value,
+              borderColor: localSettings.color === color.value ? '#000' : color.value
+            }"
+            :class="{
+              'ring-2 ring-offset-2 ring-base-content': localSettings.color === color.value
+            }"
+            @click="localSettings.color = color.value"
+            :title="color.name"
           >
-            {{ color }}
+            <span v-if="localSettings.color === color.value" class="text-white drop-shadow">✓</span>
           </button>
         </div>
       </div>
@@ -171,7 +175,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   initialName: 'Calendar',
-  initialColor: 'primary',
+  initialColor: '#3b82f6',
   initialAvailability: () => ({})
 })
 
@@ -181,8 +185,18 @@ const emit = defineEmits<{
 }>()
 
 const availableColors = [
-  'primary', 'secondary', 'accent', 'info',
-  'success', 'warning', 'error', 'neutral'
+  { name: 'Blue', value: '#3b82f6' },
+  { name: 'Purple', value: '#a855f7' },
+  { name: 'Pink', value: '#ec4899' },
+  { name: 'Cyan', value: '#06b6d4' },
+  { name: 'Green', value: '#22c55e' },
+  { name: 'Yellow', value: '#eab308' },
+  { name: 'Red', value: '#ef4444' },
+  { name: 'Orange', value: '#f97316' },
+  { name: 'Teal', value: '#14b8a6' },
+  { name: 'Indigo', value: '#6366f1' },
+  { name: 'Lime', value: '#84cc16' },
+  { name: 'Rose', value: '#f43f5e' }
 ]
 
 const daysOfWeek = [
@@ -267,10 +281,17 @@ const handleCancel = () => {
 }
 
 onMounted(() => {
+  console.log('📅 CalendarSettings mounted with props:', {
+    initialName: props.initialName,
+    initialColor: props.initialColor,
+    initialAvailability: props.initialAvailability
+  })
+  
   // Initialize with prop values
   if (props.initialAvailability && Object.keys(props.initialAvailability).length > 0) {
     localSettings.value.availability = JSON.parse(JSON.stringify(props.initialAvailability))
     initialSettings.value.availability = JSON.parse(JSON.stringify(props.initialAvailability))
+    console.log('📅 Initialized availability from props:', localSettings.value.availability)
   } else {
     // Set default availability for weekdays
     const defaultAvailability = {
@@ -282,6 +303,7 @@ onMounted(() => {
     }
     localSettings.value.availability = JSON.parse(JSON.stringify(defaultAvailability))
     initialSettings.value.availability = JSON.parse(JSON.stringify(defaultAvailability))
+    console.log('📅 Set default availability:', localSettings.value.availability)
   }
   
   // Store initial name and color

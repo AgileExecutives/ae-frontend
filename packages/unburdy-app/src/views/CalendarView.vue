@@ -73,6 +73,7 @@
               :end-hour="21"
               :slot-height="6"
               :show-current-time="true"
+              :availability="calendarAvailability"
               @meeting-click="handleMeetingClick"
               @time-slot-click="handleTimeSlotClick"
               @previous-day="() => { const d = new Date(currentDate); d.setDate(d.getDate() - 1); goToDate(d) }"
@@ -90,6 +91,8 @@
               :show-current-time="true"
               :is-loading="isLoading"
               :error="error"
+              :calendar-color="calendarColor"
+              :availability="calendarAvailability"
               @meeting-click="handleMeetingClick"
               @time-slot-click="handleTimeSlotClick"
               @previous-week="prevWeek"
@@ -161,7 +164,7 @@
                 <div class="flex items-center gap-1">
                   <div
                     class="w-3 h-3 rounded-full"
-                    :class="`bg-${calendarColor}`"
+                    :style="{ backgroundColor: calendarColor }"
                     :title="`Calendar Color: ${calendarColor}`"
                   ></div>
                   <span class="text-sm text-base-content/70 hidden lg:inline">{{ calendarColor }}</span>
@@ -210,6 +213,7 @@
               :end-hour="21"
               :slot-height="6"
               :show-current-time="true"
+              :availability="calendarAvailability"
               @meeting-click="handleMeetingClick"
               @time-slot-click="handleTimeSlotClick"
               @previous-day="() => { const d = new Date(currentDate); d.setDate(d.getDate() - 1); goToDate(d) }"
@@ -227,6 +231,8 @@
               :show-current-time="true"
               :is-loading="isLoading"
               :error="error"
+              :calendar-color="calendarColor"
+              :availability="calendarAvailability"
               @meeting-click="handleMeetingClick"
               @time-slot-click="handleTimeSlotClick"
               @previous-week="prevWeek"
@@ -300,7 +306,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import CalendarWeek from '@/components/calendar/CalendarWeek.vue'
 import CalendarMonth from '@/components/calendar/CalendarMonth.vue'
 import CalendarYear from '@/components/calendar/CalendarYear.vue'
@@ -339,7 +345,7 @@ const {
   ensureInitialized,
 } = useCalendar()
 
-const { createCalendarEntry, updateCalendarEntry, deleteCalendarEntry, updateCalendar } = useCalendarApi()
+const { createCalendarEntry, updateCalendarEntry, deleteCalendarEntry, updateCalendar, getCalendarsList } = useCalendarApi()
 const calendarStore = useCalendarStore()
 
 enum CalendarViewType {
@@ -382,6 +388,48 @@ const selectedMeeting = ref<Meeting | null>(null)
 const showSettings = ref(false)
 const settingsDrawerPinned = ref(false)
 const calendarAvailability = ref<WeeklyAvailability>({})
+
+// Debug: Watch availability changes
+watch(calendarAvailability, (newVal) => {
+  console.log('📅 calendarAvailability changed:', newVal)
+}, { deep: true })
+
+// Load calendar availability from API
+const loadCalendarAvailability = async () => {
+  try {
+    const result = await getCalendarsList()
+    console.log('📅 Loading calendar availability, API result:', result)
+    if (result.success && result.data && result.data.length > 0) {
+      const calendar = result.data[0]
+      console.log('📅 Full calendar object:', calendar)
+      console.log('📅 Calendar keys:', Object.keys(calendar))
+      console.log('📅 weekly_availability:', calendar.weekly_availability)
+      console.log('📅 weeklyAvailability:', (calendar as any).weeklyAvailability)
+      console.log('📅 availability:', (calendar as any).availability)
+      
+      // Try multiple possible field names
+      const availability = calendar.weekly_availability || 
+                          (calendar as any).weeklyAvailability || 
+                          (calendar as any).availability
+      
+      if (availability) {
+        // Create a new object to trigger reactivity
+        calendarAvailability.value = { ...availability }
+        console.log('📅 Set calendarAvailability to:', calendarAvailability.value)
+        console.log('📅 Availability keys:', Object.keys(calendarAvailability.value))
+        console.log('📅 Availability content:', JSON.parse(JSON.stringify(calendarAvailability.value)))
+        // Log each day's availability
+        Object.entries(calendarAvailability.value).forEach(([day, ranges]) => {
+          console.log(`📅   ${day}:`, ranges)
+        })
+      } else {
+        console.warn('📅 No availability field found in calendar data')
+      }
+    }
+  } catch (err) {
+    console.error('Error loading calendar availability:', err)
+  }
+}
 
 const handleViewChange = (view: 'week' | 'month' | 'year' | 'day') => {
   currentCalendarView.value = view as CalendarViewType
@@ -515,8 +563,9 @@ const saveSettings = async (settings: { name: string; color: string; availabilit
       calendarAvailability.value = settings.availability
       closeSettings()
       
-      // Optionally reload calendar data to get updated values
+      // Reload calendar data to get updated values
       await loadAllCalendarData(true)
+      await loadCalendarAvailability()
     } else {
       console.error('Failed to update calendar:', result.error)
     }
@@ -527,6 +576,7 @@ const saveSettings = async (settings: { name: string; color: string; availabilit
 
 onMounted(async () => {
   await ensureInitialized()
+  await loadCalendarAvailability()
   goToToday()
   initializeView()
   window.addEventListener('resize', initializeView)
